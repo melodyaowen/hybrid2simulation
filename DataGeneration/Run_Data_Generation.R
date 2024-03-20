@@ -19,7 +19,6 @@ combinedSimStatsCont <- bind_rows(simSetsCont[[2]], .id = "Index") %>%
   mutate(Index = as.integer(Index)) %>%
   mutate(`Absolute Difference` = abs(`Input Value` - Value))
 
-
 # Generate Binary Datasets
 
 
