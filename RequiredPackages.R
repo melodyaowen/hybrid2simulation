@@ -1,7 +1,8 @@
 # Run this before any other code to make sure all packages are installed and loaded
 
 # Package names
-packages <- c("tidyverse", "lme4", "MASS", "Matrix", "matrixcalc", "ICC", "nlme")
+packages <- c("tidyverse", "lme4", "MASS", "Matrix", "matrixcalc",
+              "ICC", "nlme", "bindata", "gee", "hybrid2power")
 
 # Install packages not yet installed
 installed_packages <- packages %in% rownames(installed.packages())

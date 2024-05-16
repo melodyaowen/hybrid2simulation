@@ -1,4 +1,4 @@
-# Script with data generation functions for two continuous endpoints
+# Script with data generation functions for two continuous endpoints, MLMM
 
 # gen_crt_coprimary_data_cont() ------------------------------------------------
 # Function to generate data for Normal Parallel CRT Data for Equal Allocation
@@ -92,7 +92,9 @@ gen_crt_coprimary_data_cont <- function(K, # Number of clusters in treatment arm
 
   # Random assignment of clusters to treatment
   groups <- tibble(cluster_id = 1:K_total,
-                   trt_group = sample(c(rep(1, K1), rep(0, K2)), replace = FALSE))
+                   trt_group = sample(c(rep(1, K1),
+                                        rep(0, K2)),
+                                      replace = FALSE))
 
   # Generate vector of random intercepts for cluster k across Q = 2 endpoints
   phi_k <- mvrnorm(n = K_total, mu = rep(0, 2), Sigma = Sigma_phi) %>%
@@ -132,7 +134,8 @@ constrRiE <- function(rho01, rho2, Q, vars){
   for(row in 1:Q){
     for(col in 1:Q){
       if(row != col){
-        SigmaE_Matrix[row,col] <- sqrt(vars[row])*sqrt(vars[col])*(rho2[row,col]-rho01[row,col])
+        SigmaE_Matrix[row,col] <- sqrt(vars[row])*sqrt(vars[col])*
+          (rho2[row,col]-rho01[row,col])
       }
     }
   }
@@ -163,7 +166,8 @@ calCovbetas_eq <- function(vars, rho01, rho2, sigmaz.square, m, Q){
   for(row in 1:Q){
     for(col in 1:Q){
       if(row != col){
-        covMatrix[row,col] <- sqrt(vars[row])*sqrt(vars[col])*(rho2[row,col]+(m-1)*rho01[row,col])/(m*sigmaz.square)
+        covMatrix[row,col] <- sqrt(vars[row])*sqrt(vars[col])*
+          (rho2[row,col]+(m-1)*rho01[row,col])/(m*sigmaz.square)
       }
     }
   }
@@ -309,7 +313,8 @@ EM.estim <- function(myData, maxiter = 500, epsilon = 1e-4, verbose = FALSE){
 
     # whether the algorithm converges
     # thetah = c(zeta,c(SigmaPhi[!lower.tri(SigmaPhi)]),diag(SigmaE))
-    thetah <- c(zeta, c(SigmaPhi[!lower.tri(SigmaPhi)]), c(SigmaE[!lower.tri(SigmaE)]))
+    thetah <- c(zeta, c(SigmaPhi[!lower.tri(SigmaPhi)]),
+                c(SigmaE[!lower.tri(SigmaE)]))
     LLnew <- loglik(thetah)
     delta <- abs(LLnew - LLold)
     LLold <- LLnew
@@ -354,8 +359,10 @@ calculateSimDataStats <- function(em_output, my_data){
   rho02_sim <- sigma2_phi_2/(sigma2_phi_2 + sigma2_e_2)
 
   # Calculate Intra- and Inter- correlations
-  rho1_sim <- sigma_phi_12/(sqrt(sigma2_phi_1 + sigma2_e_1)*sqrt(sigma2_phi_2 + sigma2_e_2))
-  rho2_sim <- (sigma_phi_12 + sigma_e_12)/(sqrt(sigma2_phi_1 + sigma2_e_1)*sqrt(sigma2_phi_2 + sigma2_e_2))
+  rho1_sim <- sigma_phi_12/(sqrt(sigma2_phi_1 + sigma2_e_1)*
+                              sqrt(sigma2_phi_2 + sigma2_e_2))
+  rho2_sim <- (sigma_phi_12 + sigma_e_12)/(sqrt(sigma2_phi_1 + sigma2_e_1)*
+                                             sqrt(sigma2_phi_2 + sigma2_e_2))
 
   # Calculate study sizes
   K_Total_sim <- length(unique(my_data$cluster_k))
@@ -370,24 +377,33 @@ calculateSimDataStats <- function(em_output, my_data){
   beta2_intercept <- em_output$theta$zeta[3]
 
   # Treatment Allocation Ratio, recall r = K2/K1 where K1 = # in treatment group
-  r_sim <- nrow(filter(my_data, treatment_z_k == 0))/nrow(filter(my_data, treatment_z_k == 1))
+  r_sim <- nrow(filter(my_data, treatment_z_k == 0))/
+    nrow(filter(my_data, treatment_z_k == 1))
 
   # Output specification table
-  sim_data_stats <- data.frame(Parameter = c("K Total", "K Treatment", "m",
-                                             "beta1", "beta1 intercept",
-                                             "beta2", "beta2 intercept",
-                                             "rho01", "rho02",
-                                             "rho1", "rho2",
-                                             "varY1", "varY2",
-                                             "r"),
-                               Value = c(K_Total_sim, K_Treatment_sim, m_sim,
-                                         round(beta1_sim, 4), round(beta1_intercept, 4),
-                                         round(beta2_sim, 4), round(beta2_intercept, 4),
-                                         round(rho01_sim, 4), round(rho02_sim, 4),
-                                         round(rho1_sim, 4), round(rho2_sim, 4),
-                                         round(varY1_sim, 4), round(varY2_sim, 4),
-                                         r_sim
-                               ))
+  sim_data_stats <- tibble(Parameter = c("K Total", "K Treatment", "m",
+                                         "beta1", "beta1 intercept",
+                                         "beta2", "beta2 intercept",
+                                         "rho01", "rho02",
+                                         "rho1", "rho2",
+                                         "varY1", "varY2",
+                                         "r"),
+                           `Estimated Value` = c(K_Total_sim,
+                                                 K_Treatment_sim,
+                                                 m_sim,
+                                                 round(beta1_sim, 4),
+                                                 round(beta1_intercept, 4),
+                                                 round(beta2_sim, 4),
+                                                 round(beta2_intercept, 4),
+                                                 round(rho01_sim, 4),
+                                                 round(rho02_sim, 4),
+                                                 round(rho1_sim, 4),
+                                                 round(rho2_sim, 4),
+                                                 round(varY1_sim, 4),
+                                                 round(varY2_sim, 4),
+                                                 r_sim
+                                                 )
+                           )
 
   return(sim_data_stats)
 }
@@ -429,20 +445,19 @@ create_all_cont_sim_dats <- function(n = 100,
 
     simStats <- calculateSimDataStats(em_output = myParams,
                                       my_data = mySimData) %>%
-      mutate(`Input Value` = c(K_input + r_input*K_input,
-                               K_input, m_input,
-                               beta1_input, 0,
-                               beta2_input, 0,
-                               rho01_input, rho02_input,
-                               rho1_input, rho2_input,
-                               varY1_input, varY2_input,
-                               r_input))
+      mutate(`True Value` = c(K_input + r_input*K_input,
+                              K_input, m_input,
+                              beta1_input, 0,
+                              beta2_input, 0,
+                              rho01_input, rho02_input,
+                              rho1_input, rho2_input,
+                              varY1_input, varY2_input,
+                              r_input)) %>%
+      relocate(`Parameter`, `True Value`)
     simDataList[[i]] <- mySimData
     simStatList[[i]] <- simStats
   }
 
-
   return(list(simDataList, simStatList))
-
 }
 
