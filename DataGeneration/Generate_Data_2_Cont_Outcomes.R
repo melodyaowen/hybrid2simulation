@@ -332,6 +332,7 @@ EM.estim <- function(myData, maxiter = 500, epsilon = 1e-4, verbose = FALSE){
   }
   param <- list(theta = list(zeta = zeta, SigmaE = SigmaE, SigmaPhi = SigmaPhi),
                 loglik = LLnew, eps = epsilon, iter = niter)
+
   return(param)
 }
 
@@ -380,6 +381,25 @@ calculateSimDataStats <- function(em_output, my_data){
   r_sim <- nrow(filter(my_data, treatment_z_k == 0))/
     nrow(filter(my_data, treatment_z_k == 1))
 
+  r_alt_sim <- 1/(r_sim + 1)
+  sigmaz.square_sim <- r_alt_sim*(1 - r_alt_sim)
+
+  # Calculate variance of betas, i.e. Var(sqrt(n)*(beta_hat - beta))
+  sigmaks.sq <- diag(calCovbetas_eq(vars = c(varY1_sim, varY2_sim),
+                                    rho01 = matrix(c(rho01_sim, rho1_sim,
+                                                     rho1_sim, rho02_sim),
+                                                   2, 2),
+                                    rho2 = matrix(c(1, rho2_sim,
+                                                    rho2_sim, 1),
+                                                  2, 2),
+                                    sigmaz.square = sigmaz.square_sim,
+                                    m = m_sim,
+                                    Q = 2))
+
+  # Variance of betas
+  varBeta1_sim <- sigmaks.sq[1]/K_Total_sim
+  varBeta2_sim <- sigmaks.sq[2]/K_Total_sim
+
   # Output specification table
   sim_data_stats <- tibble(Parameter = c("K Total", "K Treatment", "m",
                                          "beta1", "beta1 intercept",
@@ -387,6 +407,7 @@ calculateSimDataStats <- function(em_output, my_data){
                                          "rho01", "rho02",
                                          "rho1", "rho2",
                                          "varY1", "varY2",
+                                         "varBeta1", "varBeta2",
                                          "r"),
                            `Estimated Value` = c(K_Total_sim,
                                                  K_Treatment_sim,
@@ -401,6 +422,8 @@ calculateSimDataStats <- function(em_output, my_data){
                                                  round(rho2_sim, 4),
                                                  round(varY1_sim, 4),
                                                  round(varY2_sim, 4),
+                                                 round(varBeta1_sim, 4),
+                                                 round(varBeta2_sim, 4),
                                                  r_sim
                                                  )
                            )
@@ -445,6 +468,7 @@ create_all_cont_sim_dats <- function(n = 100,
 
     simStats <- calculateSimDataStats(em_output = myParams,
                                       my_data = mySimData) %>%
+      filter(Parameter != "varBeta1", Parameter != "varBeta2") %>%
       mutate(`True Value` = c(K_input + r_input*K_input,
                               K_input, m_input,
                               beta1_input, 0,
@@ -454,10 +478,69 @@ create_all_cont_sim_dats <- function(n = 100,
                               varY1_input, varY2_input,
                               r_input)) %>%
       relocate(`Parameter`, `True Value`)
+
     simDataList[[i]] <- mySimData
     simStatList[[i]] <- simStats
   }
-
   return(list(simDataList, simStatList))
 }
 
+# run_cont_sim()
+# Creates "n" amount of simulated datasets
+run_cont_sim <- function(n = 1000,
+                         scenarioTable){
+
+  # Setting the seed
+  set.seed(1972)
+
+  # Initialize final dataset
+  cont_sim_data <- NULL
+
+  # Loop through each simulation parameter scenario
+  for(currScenario in 1:nrow(scenarioTable)){
+    for(currData in 1:n){
+      # Specify current set of scenario true parameters
+      currTrueParams <- scenarioTable[currScenario,]
+
+      # Create a raw dataset based on current true parameters
+      rawSimData <- gen_crt_coprimary_data_cont(K = currTrueParams$K,
+                                                m = currTrueParams$m,
+                                                beta1 = currTrueParams$beta1,
+                                                beta2 = currTrueParams$beta2,
+                                                rho01 = currTrueParams$rho01,
+                                                rho02 = currTrueParams$rho02,
+                                                rho1 = currTrueParams$rho1,
+                                                rho2 = currTrueParams$rho2,
+                                                varY1 = currTrueParams$varY1,
+                                                varY2 = currTrueParams$varY2,
+                                                r = currTrueParams$r
+                                                )
+
+      # Run EM estimation on current raw dataset
+      currOutputEM <- EM.estim(myData = rawSimData, maxiter = 500,
+                               epsilon = 1e-4, verbose = FALSE)
+
+      # Extract parameters from EM output and raw dataset
+      currEstParams <- calculateSimDataStats(currOutputEM, rawSimData) %>%
+        mutate(Parameter = str_replace(Parameter, " ", "_")) %>%
+        pivot_wider(names_from = Parameter, values_from = 'Estimated Value') %>%
+        mutate(Scenario_ID = currScenario, Dataset_ID = currData) %>%
+        relocate(Scenario_ID, Dataset_ID)
+
+      cont_sim_data <- cont_sim_data %>%
+        bind_rows(., currEstParams)
+    } # End loop 1:n
+  } # End loop 1:nrow(scenarioTable)
+
+  # Figuring out how many simulation dataframes are in the directory
+  # specifically for the continuous case
+  fileNumber <- length(list.files("/Users/melodyowen/Desktop/GitHub/hybrid2simulation/SimulationOutput",
+                                  pattern = "cont",
+                                  all.files = FALSE, recursive = TRUE,
+                                  full.names = TRUE))
+
+  # Writing the CSV to the file
+  write.csv(cont_sim_data,
+            paste0("/Users/melodyowen/Desktop/GitHub/hybrid2simulation/SimulationOutput/",
+                   "cont_sim_data", "_", fileNumber, ".csv"))
+}
