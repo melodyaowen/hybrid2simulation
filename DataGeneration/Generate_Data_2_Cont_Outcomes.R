@@ -529,18 +529,24 @@ run_cont_sim <- function(n = 1000,
 
       cont_sim_data <- cont_sim_data %>%
         bind_rows(., currEstParams)
+
+      # Printing progress for n datasets
+      cat("Completed", currData, "/", n,
+          "datasets for scenario", currScenario, "/", nrow(scenarioTable), "\n")
+
     } # End loop 1:n
+
   } # End loop 1:nrow(scenarioTable)
 
   # Figuring out how many simulation dataframes are in the directory
   # specifically for the continuous case
-  fileNumber <- length(list.files("/Users/melodyowen/Desktop/GitHub/hybrid2simulation/SimulationOutput",
+  fileNumber <- length(list.files("./SimulationOutput",
                                   pattern = "cont",
                                   all.files = FALSE, recursive = TRUE,
                                   full.names = TRUE))
 
   # Writing the CSV to the file
   write.csv(cont_sim_data,
-            paste0("/Users/melodyowen/Desktop/GitHub/hybrid2simulation/SimulationOutput/",
+            paste0("./SimulationOutput/",
                    "cont_sim_data", "_", fileNumber, ".csv"))
 }

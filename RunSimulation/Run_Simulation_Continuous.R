@@ -124,7 +124,7 @@ View(simSetsCont[[1]][[1]])
 View(simSetsCont[[2]][[1]])
 
 # Generate Continuous Datasets -------------------------------------------------
-run_cont_sim(n = 5, scenarioTable = simParameters)
+run_cont_sim(n = 2000, scenarioTable = simParameters)
 
 contResults <- read.csv("./SimulationOutput/cont_sim_data_0.csv") %>%
   dplyr::select(-X)
