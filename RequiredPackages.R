@@ -2,7 +2,7 @@
 
 # Package names
 packages <- c("tidyverse", "lme4", "MASS", "Matrix", "matrixcalc",
-              "ICC", "nlme", "bindata", "gee", "crt2power")
+              "ICC", "nlme", "bindata", "gee", "crt2power", "mosaic")
 
 # Install packages not yet installed
 installed_packages <- packages %in% rownames(installed.packages())

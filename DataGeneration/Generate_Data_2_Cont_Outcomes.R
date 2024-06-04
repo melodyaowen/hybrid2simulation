@@ -488,7 +488,8 @@ create_all_cont_sim_dats <- function(n = 100,
 # run_cont_sim()
 # Creates "n" amount of simulated datasets
 run_cont_sim <- function(n = 1000,
-                         scenarioTable){
+                         scenarioTable,
+                         null = FALSE){
 
   # Setting the seed
   set.seed(1972)
@@ -538,15 +539,29 @@ run_cont_sim <- function(n = 1000,
 
   } # End loop 1:nrow(scenarioTable)
 
-  # Figuring out how many simulation dataframes are in the directory
-  # specifically for the continuous case
-  fileNumber <- length(list.files("./SimulationOutput",
-                                  pattern = "cont",
-                                  all.files = FALSE, recursive = TRUE,
-                                  full.names = TRUE))
+  if(null == FALSE){
+    # Figuring out how many simulation dataframes are in the directory
+    # specifically for the continuous case
+    fileNumber <- length(list.files("./SimulationOutput",
+                                    pattern = "cont_sim_data",
+                                    all.files = FALSE, recursive = TRUE,
+                                    full.names = TRUE))
 
-  # Writing the CSV to the file
-  write.csv(cont_sim_data,
-            paste0("./SimulationOutput/",
-                   "cont_sim_data", "_", fileNumber, ".csv"))
+    # Writing the CSV to the file
+    write.csv(cont_sim_data,
+              paste0("./SimulationOutput/",
+                     "cont_sim_data", "_", fileNumber, ".csv"))
+  } else{
+    # Figuring out how many simulation dataframes are in the directory
+    # specifically for the continuous case
+    fileNumber <- length(list.files("./SimulationOutput",
+                                    pattern = "cont_sim_null_data",
+                                    all.files = FALSE, recursive = TRUE,
+                                    full.names = TRUE))
+
+    # Writing the CSV to the file
+    write.csv(cont_sim_data,
+              paste0("./SimulationOutput/",
+                     "cont_sim_null_data", "_", fileNumber, ".csv"))
+  }
 }
