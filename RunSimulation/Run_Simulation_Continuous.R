@@ -23,8 +23,9 @@ simParameters <- expand.grid(K = c(8),
 
 simParameters_null <- expand.grid(K = c(8),
                                   m = c(60),
-                                  betas = c(paste("0 0.4"),
-                                            paste("0 0.2")),
+                                  betas = c(paste("0 0"),
+                                            paste("0 0.2"),
+                                            paste("0 0.4")),
                                   vars = c(paste("1 1")),
                                   rho0 = c(paste("0.05 0.1"),
                                            paste("0.1 0.1"),
@@ -173,7 +174,7 @@ View(simSetsCont[[2]][[1]])
 
 # Generate Continuous Datasets -------------------------------------------------
 #run_cont_sim(n = 2000, scenarioTable = simParameters)
-#run_cont_sim(n = 2000, scenarioTable = simParameters, null = TRUE)
+run_cont_sim(n = 2000, scenarioTable = simParameters_null, null = TRUE)
 
 # Read in Continuous Datasets --------------------------------------------------
 
