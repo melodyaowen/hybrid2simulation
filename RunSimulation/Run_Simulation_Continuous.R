@@ -380,7 +380,8 @@ powerResultTable <- contResultsPower %>%
                 '5a. Conjunctive T (mean)' = method5_T_mean,
                 '5a. Conjunctive T (true)' = method5_T,
                 '5b. Conjunctive MVN (mean)' = method5_MVN_mean,
-                '5b. Conjunctive MVN (true)' = method5_MVN)
+                '5b. Conjunctive MVN (true)' = method5_MVN) %>%
+  arrange(betas, rho0s)
 
 # Evaluate Type I Error Rate for Continuous Data -------------------------------
 # Type I error, probability of rejecting null when it is true
@@ -533,7 +534,8 @@ typeIerrorResultTable <- typeIerror_summary %>%
                 '4a. Disjunctive F' = method4_F_typeI_error_rate,
                 '4b. Disjunctive Chi2' = method4_Chi2_typeI_error_rate,
                 '5a. Conjunctive T' = method5_T_typeI_error_rate,
-                '5b. Conjunctive MVN' = method5_Norm_typeI_error_rate)
+                '5b. Conjunctive MVN' = method5_Norm_typeI_error_rate) %>%
+  arrange(betas, rho0s)
 
 # Save Result Tables -----------------------------------------------------------
 
