@@ -148,8 +148,8 @@ truePowerTable_null <- simParameters_null %>%
                                             r = r, dist = "MVN")) %>%
   mutate_at(vars(contains('method')), funs(.*100))
 
-View(truePowerTable)
-View(truePowerTable_null)
+#View(truePowerTable)
+#View(truePowerTable_null)
 
 # Check a few cases to make sure model estimates are ok ------------------------
 simSetsCont <- create_all_cont_sim_dats(n = 2,
@@ -169,12 +169,12 @@ combinedSimStatsCont <- bind_rows(simSetsCont[[2]], .id = "Index") %>%
   mutate(Index = as.integer(Index)) %>%
   mutate(`Absolute Difference` = abs(`True Value` - `Estimated Value`))
 
-View(simSetsCont[[1]][[1]])
-View(simSetsCont[[2]][[1]])
+#View(simSetsCont[[1]][[1]])
+#View(simSetsCont[[2]][[1]])
 
 # Generate Continuous Datasets -------------------------------------------------
 #run_cont_sim(n = 2000, scenarioTable = simParameters)
-run_cont_sim(n = 2000, scenarioTable = simParameters_null, null = TRUE)
+#run_cont_sim(n = 2000, scenarioTable = simParameters_null, null = TRUE)
 
 # Read in Continuous Datasets --------------------------------------------------
 
@@ -341,7 +341,7 @@ ggplot(data = contPlotData, aes(x = Method, y = Power)) + geom_boxplot() +
   ggtitle("Power Results from Co-Primary Continuous CRT Simulation\n(Blue points are true power based on true parameters)")
 
 # Table summarizing power results
-resultTable <- contResultsPower %>%
+powerResultTable <- contResultsPower %>%
   group_by(Scenario_ID) %>%
   summarise(across(starts_with("method"), list(mean = mean))) %>%
   ungroup() %>%
@@ -363,29 +363,32 @@ resultTable <- contResultsPower %>%
                 method5_T_mean, method5_T,
                 method5_MVN_mean, method5_MVN) %>%
   mutate(across(starts_with("method"), round, 2)) %>%
-  dplyr::rename('P-Value Bonf. (mean)' = method1_bonf_mean,
-                'P-Value Bonf. (true)' = method1_bonf,
-                'P-Value Sidak (mean)' = method1_sidak_mean,
-                'P-Value Sidak (true)' = method1_sidak,
-                'P-Value DAP (mean)' = method1_dap_mean,
-                'P-Value DAP (true)' = method1_dap,
-                'Combined (mean)' = method2_mean,
-                'Combined (true)' = method2,
-                'Single Weighted (mean)' = method3_mean,
-                'Single Weighted (true)' = method3,
-                'Disjunctive Chi2 (mean)' = method4_chi2_mean,
-                'Disjunctive Chi2 (true)' = method4_chi2,
-                'Disjunctive F (mean)' = method4_F_mean,
-                'Disjunctive F (true)' = method4_F,
-                'Conjunctive T (mean)' = method5_T_mean,
-                'Conjunctive T (true)' = method5_T,
-                'Conjunctive MVN (mean)' = method5_MVN_mean,
-                'Conjunctive MVN (true)' = method5_MVN)
+  dplyr::rename('1a. P-Value Bonf. (mean)' = method1_bonf_mean,
+                '1a. P-Value Bonf. (true)' = method1_bonf,
+                '1b. P-Value Sidak (mean)' = method1_sidak_mean,
+                '1b. P-Value Sidak (true)' = method1_sidak,
+                '1c. P-Value DAP (mean)' = method1_dap_mean,
+                '1c. P-Value DAP (true)' = method1_dap,
+                '2. Combined (mean)' = method2_mean,
+                '2. Combined (true)' = method2,
+                '3. Single Weighted (mean)' = method3_mean,
+                '3. Single Weighted (true)' = method3,
+                '4a. Disjunctive F (mean)' = method4_F_mean,
+                '4a. Disjunctive F (true)' = method4_F,
+                '4b. Disjunctive Chi2 (mean)' = method4_chi2_mean,
+                '4b. Disjunctive Chi2 (true)' = method4_chi2,
+                '5a. Conjunctive T (mean)' = method5_T_mean,
+                '5a. Conjunctive T (true)' = method5_T,
+                '5b. Conjunctive MVN (mean)' = method5_MVN_mean,
+                '5b. Conjunctive MVN (true)' = method5_MVN)
 
 # Evaluate Type I Error Rate for Continuous Data -------------------------------
 # Type I error, probability of rejecting null when it is true
 
 typeIerror_data <- contResults_null %>%
+  left_join(dplyr::select(simParameters_null, Scenario_ID = Scenario,
+                          beta1_true = beta1, beta2_true = beta2),
+            by = "Scenario_ID") %>%
   add_row(Scenario_ID = 0, Dataset_ID = 0,
           K_Total = 30, K_Treatment = 15, m = 300,
           beta1 = 0.1, beta2 = 0.1, beta1_intercept = 0, beta2_intercept = 0,
@@ -396,14 +399,146 @@ typeIerror_data <- contResults_null %>%
          VIF12 = rho2 + (m-1)*rho1,
          betaC = abs(beta1) + abs(beta2),
          varYc = varY1 + varY2 + 2*rho2*sqrt(varY1)*sqrt(varY2),
-         rho0c = (rho01*varY1 + rho02*varY2 + 2*rho1*sqrt(varY1)*sqrt(varY2))/(varY1 + varY2 + 2*rho2*sqrt(varY1)*sqrt(varY2))) %>%
+         rho0c = (rho01*varY1 + rho02*varY2 +
+                    2*rho1*sqrt(varY1)*sqrt(varY2))/(varY1 + varY2 +
+                                          2*rho2*sqrt(varY1)*sqrt(varY2)),
+         alpha_bonf = 0.05/2,
+         alpha_sidak = 1 - sqrt(1 - 0.05),
+         alpha_dap = 1 - (1 - 0.05)^(1/(2^(1 - rho2)))) %>%
   mutate(method1_stat1 = (beta1^2)/varBeta1,
          method1_stat2 = (beta2^2)/varBeta2,
-         #method2_stat = ((abs(beta1) + abs(beta2))^2)/(varBeta1 + varBeta2 + (1 + 1/r)*(1/(K_Treatment*m))*((VIF12)*sqrt(varY1*varY2))),
+         method2_stat_alt = ((abs(beta1) + abs(beta2))^2)/(varBeta1 + varBeta2 +
+                      (1 + 1/r)*(1/(K_Treatment*m))*(VIF12*sqrt(varY1*varY2))),
          method2_stat = (betaC^2)/(2*(varYc/(K_Treatment*m))*(1 + (m-1)*rho0c)),
-         method3_stat = ((sqrt((beta1^2)/(2*(varY1/(K_Treatment*m))*VIF1))+sqrt((beta2^2)/(2*(varY2/(K_Treatment*m))*VIF2)))^2)/(2*(1 + VIF12/(sqrt(VIF1*VIF2)))),
-         method4_stat = (K_Treatment*m*((beta1^2)*varY2*VIF2 - 2*beta1*beta2*VIF12*sqrt(varY1)*sqrt(varY2) + (beta2^2)*varY1*VIF1))/(2*2*varY1*varY2*(VIF1*VIF2 - VIF12^2)),
+         method3_stat = ((sqrt((beta1^2)/(2*(varY1/(K_Treatment*m))*VIF1)) +
+                        sqrt((beta2^2)/(2*(varY2/(K_Treatment*m))*VIF2)))^2)/
+                        (2*(1 + VIF12/(sqrt(VIF1*VIF2)))),
+         method4_stat = (K_Treatment*m*((beta1^2)*varY2*VIF2 -
+                        2*beta1*beta2*VIF12*sqrt(varY1)*sqrt(varY2) +
+                        (beta2^2)*varY1*VIF1))/(2*2*varY1*varY2*(VIF1*VIF2 - VIF12^2)),
          method5_stat1 = (beta1*sqrt(2*K_Treatment))/sqrt((4*varY1*VIF1)/m),
          method5_stat2 = (beta2*sqrt(2*K_Treatment))/sqrt((4*varY2*VIF2)/m)
-         )
+         ) %>%
+  mutate(method1_p1 = pchisq(q = method1_stat1, df = 1, lower.tail = FALSE),
+         method1_p2 = pchisq(q = method1_stat2, df = 1, lower.tail = FALSE),
+         method2_p_alt = pchisq(q = method2_stat_alt, df = 1, lower.tail = FALSE),
+         method2_p = pchisq(q = method2_stat, df = 1, lower.tail = FALSE),
+         method3_p = pchisq(q = method3_stat, df = 1, lower.tail = FALSE),
+         method4_p_F = pf(method4_stat, df1 = 2, df2 = K_Total - 2*2,
+                          lower.tail = FALSE, log.p = FALSE),
+         method4_p_Chi2 = pchisq(q = method4_stat, df = 2, lower.tail = FALSE),
+         method5_p1_Norm = pnorm(q = method5_stat1),
+         method5_p2_Norm = pnorm(q = method5_stat2),
+         method5_p1_T = pt(q = method5_stat1, df = (K_Total - 2*2)),
+         method5_p2_T = pt(q = method5_stat2, df = (K_Total - 2*2)),
+         abs_beta1 = abs(beta1),
+         abs_beta2 = abs(beta2)
+         ) %>%
+  mutate_if(is.numeric, round, digits = 4) %>%
+  mutate(method1_bonf_reject = ifelse(method1_p1 <= alpha_bonf| method1_p2 <= alpha_bonf,
+                                      1, 0),
+         method1_sidak_reject = ifelse(method1_p1 <= alpha_sidak | method1_p2 <= alpha_sidak,
+                                       1, 0),
+         method1_dap_reject = ifelse(method1_p1 <= alpha_dap | method1_p2 <= alpha_dap,
+                                     1, 0),
+         method2_reject = ifelse(method2_p <= 0.05,
+                                 1, 0),
+         method3_reject = ifelse(method3_p <= 0.05,
+                                 1, 0),
+         method4_F_reject = ifelse(method4_p_F <= 0.05,
+                                   1, 0),
+         method4_Chi2_reject = ifelse(method4_p_Chi2 <= 0.05,
+                                      1, 0),
+         method5_Norm_reject = ifelse(method5_p1_Norm <= 0.05 & method5_p1_Norm <= 0.05,
+                                      1, 0),
+         method5_T_reject = ifelse(method5_p1_T <= 0.05 & method5_p1_T <= 0.05,
+                                   1, 0))
 
+typeIerror_shortened <- typeIerror_data %>%
+  mutate(betaC_true = abs(beta1_true) + abs(beta2_true)) %>%
+  dplyr::select(Scenario_ID, Dataset_ID, K_Total, K_Treatment, m,
+                beta1, beta1_true, beta2, beta2_true,
+                betaC, betaC_true, contains("reject"))
+
+typeIerror_summary <- typeIerror_shortened %>%
+  group_by(Scenario_ID) %>%
+  summarize(Scenario_n = n(),
+            K_Total = mean(K_Total),
+            K_Treatment = mean(K_Treatment),
+            m = mean(m),
+            beta1_mean = mean(beta1),
+            beta2_mean = mean(beta2),
+            betaC_mean = mean(betaC),
+            beta1_true = mean(beta1_true),
+            beta2_true = mean(beta2_true),
+            betaC_true = mean(betaC_true),
+            method1_bonf_reject = sum(method1_bonf_reject),
+            method1_sidak_reject = sum(method1_sidak_reject),
+            method1_dap_reject = sum(method1_dap_reject),
+            method2_reject = sum(method2_reject),
+            method3_reject = sum(method3_reject),
+            method4_F_reject = sum(method4_F_reject),
+            method4_Chi2_reject = sum(method4_Chi2_reject),
+            method5_Norm_reject = sum(method5_Norm_reject),
+            method5_T_reject = sum(method5_T_reject)
+            ) %>%
+  mutate(method1_null_case = ifelse(beta1_true == 0 & beta2_true == 0, 1, 0),
+         method2_null_case = ifelse(betaC_true == 0, 1, 0),
+         method3_null_case = ifelse(beta1_true == 0 & beta2_true == 0, 1, 0),
+         method4_null_case = ifelse(beta1_true == 0 & beta2_true == 0, 1, 0),
+         method5_null_case = ifelse(beta1_true != 0 & beta2_true != 0, 0, 1)) %>%
+  mutate(method1_bonf_typeI_error_rate = ifelse(method1_null_case == 1,
+                                                method1_bonf_reject/Scenario_n, NA),
+         method1_sidak_typeI_error_rate = ifelse(method1_null_case == 1,
+                                                 method1_sidak_reject/Scenario_n, NA),
+         method1_dap_typeI_error_rate = ifelse(method1_null_case == 1,
+                                               method1_dap_reject/Scenario_n, NA),
+         method2_typeI_error_rate = ifelse(method2_null_case == 1,
+                                           method2_reject/Scenario_n, NA),
+         method3_typeI_error_rate = ifelse(method3_null_case == 1,
+                                           method3_reject/Scenario_n, NA),
+         method4_F_typeI_error_rate = ifelse(method4_null_case == 1,
+                                             method4_F_reject/Scenario_n, NA),
+         method4_Chi2_typeI_error_rate = ifelse(method4_null_case == 1,
+                                                method4_Chi2_reject/Scenario_n, NA),
+         method5_Norm_typeI_error_rate = ifelse(method5_null_case == 1,
+                                           method5_Norm_reject/Scenario_n, NA),
+         method5_T_typeI_error_rate = ifelse(method5_null_case == 1,
+                                           method5_T_reject/Scenario_n, NA)) %>%
+  filter(Scenario_ID != 0)
+
+typeIerrorResultTable <- typeIerror_summary %>%
+  dplyr::select(-m) %>%
+  left_join(simParameters_null, by = c("Scenario_ID" = "Scenario")) %>%
+  mutate(betas = paste0("(", beta1, ", ", beta2, ")"),
+         rho0s = paste0("(", rho01, ", ", rho02, ")"),
+         varYs = paste0("(", varY1, ", ", varY2, ")")) %>%
+  dplyr::select(Scenario_ID,
+                K, m, betas,
+                rho0s, rho1, rho2, varYs,
+                method1_bonf_typeI_error_rate,
+                method1_sidak_typeI_error_rate,
+                method1_dap_typeI_error_rate,
+                method2_typeI_error_rate,
+                method3_typeI_error_rate,
+                method4_F_typeI_error_rate,
+                method4_Chi2_typeI_error_rate,
+                method5_Norm_typeI_error_rate,
+                method5_T_typeI_error_rate) %>%
+  dplyr::rename('1a. P-Value Bonf.' = method1_bonf_typeI_error_rate,
+                '1b. P-Value Sidak' = method1_sidak_typeI_error_rate,
+                '1c. P-Value DAP' = method1_dap_typeI_error_rate,
+                '2. Combined' = method2_typeI_error_rate,
+                '3. Single Weighted' = method3_typeI_error_rate,
+                '4a. Disjunctive F' = method4_F_typeI_error_rate,
+                '4b. Disjunctive Chi2' = method4_Chi2_typeI_error_rate,
+                '5a. Conjunctive T' = method5_T_typeI_error_rate,
+                '5b. Conjunctive MVN' = method5_Norm_typeI_error_rate)
+
+# Save Result Tables -----------------------------------------------------------
+
+# Power result table
+write.csv(powerResultTable, paste0("./ResultTables/powerResultTable_0.csv"))
+
+# Type I error result table
+write.csv(typeIerrorResultTable, paste0("./ResultTables/typeIerrorResultTable_0.csv"))
