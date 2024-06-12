@@ -4,8 +4,8 @@ source("./RequiredPackages.R")
 # Table of all Parameters ------------------------------------------------------
 simParameters <- expand.grid(K = c(8),
                              m = c(60),
-                             betas = c(paste("0.2 0.4"),
-                                       paste("0.2 0.2")),
+                             betas = c(paste("0.25 0.4"), # considered 0.25
+                                       paste("0.25 0.25")), # and and 0.2
                              vars = c(paste("1 1")),
                              rho0 = c(paste("0.05 0.1"),
                                       paste("0.1 0.1"),
@@ -24,7 +24,7 @@ simParameters <- expand.grid(K = c(8),
 simParameters_null <- expand.grid(K = c(8),
                                   m = c(60),
                                   betas = c(paste("0 0"),
-                                            paste("0 0.2"),
+                                            paste("0 0.25"), # 0.25 or 0.2
                                             paste("0 0.4")),
                                   vars = c(paste("1 1")),
                                   rho0 = c(paste("0.05 0.1"),
@@ -526,6 +526,15 @@ typeIerrorResultTable <- typeIerror_summary %>%
                 method4_Chi2_typeI_error_rate,
                 method5_Norm_typeI_error_rate,
                 method5_T_typeI_error_rate) %>%
+  mutate(method1_bonf_typeI_error_rate = round(method1_bonf_typeI_error_rate, digits = 3),
+         method1_sidak_typeI_error_rate = round(method1_sidak_typeI_error_rate, digits = 3),
+         method1_dap_typeI_error_rate = round(method1_dap_typeI_error_rate, digits = 3),
+         method2_typeI_error_rate = round(method2_typeI_error_rate, digits = 3),
+         method3_typeI_error_rate = round(method3_typeI_error_rate, digits = 3),
+         method4_F_typeI_error_rate = round(method4_F_typeI_error_rate, digits = 3),
+         method4_Chi2_typeI_error_rate = round(method4_Chi2_typeI_error_rate, digits = 3),
+         method5_T_typeI_error_rate = round(method5_T_typeI_error_rate, digits = 3),
+         method5_Norm_typeI_error_rate = round(method5_Norm_typeI_error_rate, digits = 3)) %>%
   dplyr::rename('1a. P-Value Bonf.' = method1_bonf_typeI_error_rate,
                 '1b. P-Value Sidak' = method1_sidak_typeI_error_rate,
                 '1c. P-Value DAP' = method1_dap_typeI_error_rate,
