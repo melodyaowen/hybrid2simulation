@@ -179,11 +179,17 @@ combinedSimStatsCont <- bind_rows(simSetsCont[[2]], .id = "Index") %>%
 # Read in Continuous Datasets --------------------------------------------------
 
 # Reading in the CSV file with sim results (not null)
-contResults <- read.csv("./SimulationOutput/cont_sim_data_0.csv") %>%
+# contResults <- read.csv("./SimulationOutput/cont_sim_data_0.csv") %>%
+#   dplyr::select(-X)
+
+contResults <- read.csv("./SimulationOutput/cont_sim_data_1.csv") %>%
   dplyr::select(-X)
 
 # Reading in the CSV file with sim results (null hypothesis case)
-contResults_null <- read.csv("./SimulationOutput/cont_sim_null_data_0.csv") %>%
+# contResults_null <- read.csv("./SimulationOutput/cont_sim_null_data_0.csv") %>%
+#   dplyr::select(-X)
+
+contResults_null <- read.csv("./SimulationOutput/cont_sim_null_data_1.csv") %>%
   dplyr::select(-X)
 
 # Evaluate Power for Continuous Data -------------------------------------------
@@ -549,7 +555,9 @@ typeIerrorResultTable <- typeIerror_summary %>%
 # Save Result Tables -----------------------------------------------------------
 
 # Power result table
-write.csv(powerResultTable, paste0("./ResultTables/powerResultTable_0.csv"))
+#write.csv(powerResultTable, paste0("./ResultTables/powerResultTable_0.csv"))
+#write.csv(powerResultTable, paste0("./ResultTables/powerResultTable_1.csv"))
 
 # Type I error result table
-write.csv(typeIerrorResultTable, paste0("./ResultTables/typeIerrorResultTable_0.csv"))
+#write.csv(typeIerrorResultTable, paste0("./ResultTables/typeIerrorResultTable_0.csv"))
+#write.csv(typeIerrorResultTable, paste0("./ResultTables/typeIerrorResultTable_1.csv"))
