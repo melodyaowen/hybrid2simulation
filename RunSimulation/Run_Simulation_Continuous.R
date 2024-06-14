@@ -148,8 +148,8 @@ truePowerTable_null <- simParameters_null %>%
                                             r = r, dist = "MVN")) %>%
   mutate_at(vars(contains('method')), funs(.*100))
 
-#View(truePowerTable)
-#View(truePowerTable_null)
+View(truePowerTable)
+View(truePowerTable_null)
 
 # Check a few cases to make sure model estimates are ok ------------------------
 simSetsCont <- create_all_cont_sim_dats(n = 2,
