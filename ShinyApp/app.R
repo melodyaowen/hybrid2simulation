@@ -1,5 +1,6 @@
 library(shiny)
 library(ggplot2)
+library(latex2exp)
 
 # Load your package
 # library(yourpackage)  # Uncomment and replace 'yourpackage' with the actual package name
@@ -130,84 +131,319 @@ server <- function(input, output) {
     rho1_input <- as.numeric(input$rho1_K)
     rho2_input <- as.numeric(input$rho2_K)
 
+    # r_input <- 0.5
+    # power_input <- 0.8
+    # m_input <- 300
+    # alpha_input <- 0.05
+    # beta1_input <- 0.1
+    # beta2_input <- 0.1
+    # varY1_input <- 0.23
+    # varY2_input <- 0.25
+    # rho01_input <- 0.025
+    # rho02_input <- 0.025
+    # rho1_input <- 0.01
+    # rho2_input <- 0.05
+
     # Ensure inputs are not empty
     if (!is.na(r_input) && !is.na(power_input) && !is.na(m_input) && !is.na(alpha_input) && !is.na(beta1_input) && !is.na(beta2_input) && !is.na(varY1_input) && !is.na(varY2_input) && !is.na(rho01_input) && !is.na(rho02_input) && !is.na(rho1_input) && !is.na(rho2_input)) {
-      K1_bonf <- calc_K_pval_adj(m = m_input, power = power_input,
-                                 alpha = alpha_input,
-                                 beta1 = beta1_input, beta2 = beta2_input,
-                                 varY1 = varY1_input, varY2 = varY2_input,
-                                 rho01 = rho01_input, rho02 = rho02_input,
-                                 rho2  = rho2_input, r = r_input)$`Final Treatment (K)`[[1]]
+      if(r_input == 1){
+        K1_bonf_trt <- calc_K_pval_adj(m = m_input, power = power_input,
+                                       alpha = alpha_input,
+                                       beta1 = beta1_input, beta2 = beta2_input,
+                                       varY1 = varY1_input, varY2 = varY2_input,
+                                       rho01 = rho01_input, rho02 = rho02_input,
+                                       rho2  = rho2_input,
+                                       r = r_input)$`Final Treatment (K)`[[1]]
+        K1_bonf_ctl <- calc_K_pval_adj(m = m_input, power = power_input,
+                                       alpha = alpha_input,
+                                       beta1 = beta1_input, beta2 = beta2_input,
+                                       varY1 = varY1_input, varY2 = varY2_input,
+                                       rho01 = rho01_input, rho02 = rho02_input,
+                                       rho2  = rho2_input,
+                                       r = r_input)$`Final Control (K)`[[1]]
 
-      K1_sidak <- calc_K_pval_adj(m = m_input, power = power_input,
-                                  alpha = alpha_input,
-                                  beta1 = beta1_input, beta2 = beta2_input,
-                                  varY1 = varY1_input, varY2 = varY2_input,
-                                  rho01 = rho01_input, rho02 = rho02_input,
-                                  rho2  = rho2_input, r = r_input)$`Final Treatment (K)`[[2]]
+        K1_sidak_trt <- calc_K_pval_adj(m = m_input, power = power_input,
+                                        alpha = alpha_input,
+                                        beta1 = beta1_input, beta2 = beta2_input,
+                                        varY1 = varY1_input, varY2 = varY2_input,
+                                        rho01 = rho01_input, rho02 = rho02_input,
+                                        rho2  = rho2_input,
+                                        r = r_input)$`Final Treatment (K)`[[2]]
+        K1_sidak_ctl <- calc_K_pval_adj(m = m_input, power = power_input,
+                                        alpha = alpha_input,
+                                        beta1 = beta1_input, beta2 = beta2_input,
+                                        varY1 = varY1_input, varY2 = varY2_input,
+                                        rho01 = rho01_input, rho02 = rho02_input,
+                                        rho2  = rho2_input,
+                                        r = r_input)$`Final Control (K)`[[2]]
 
-      K1_dap <- calc_K_pval_adj(m = m_input, power = power_input,
-                                alpha = alpha_input,
-                                beta1 = beta1_input, beta2 = beta2_input,
-                                varY1 = varY1_input, varY2 = varY2_input,
-                                rho01 = rho01_input, rho02 = rho02_input,
-                                rho2  = rho2_input, r = r_input)$`Final Treatment (K)`[[3]]
+        K1_dap_trt <- calc_K_pval_adj(m = m_input, power = power_input,
+                                      alpha = alpha_input,
+                                      beta1 = beta1_input, beta2 = beta2_input,
+                                      varY1 = varY1_input, varY2 = varY2_input,
+                                      rho01 = rho01_input, rho02 = rho02_input,
+                                      rho2  = rho2_input,
+                                      r = r_input)$`Final Treatment (K)`[[3]]
+        K1_dap_ctl <- calc_K_pval_adj(m = m_input, power = power_input,
+                                      alpha = alpha_input,
+                                      beta1 = beta1_input, beta2 = beta2_input,
+                                      varY1 = varY1_input, varY2 = varY2_input,
+                                      rho01 = rho01_input, rho02 = rho02_input,
+                                      rho2  = rho2_input,
+                                      r = r_input)$`Final Control (K)`[[3]]
 
-      K2 <- calc_K_comb_outcome(m = m_input, power = power_input,
-                                alpha = alpha_input, r = r_input,
-                                beta1 = beta1_input, beta2 = beta2_input,
-                                varY1 = varY1_input, varY2 = varY2_input,
-                                rho01 = rho01_input, rho02 = rho02_input,
-                                rho1 = rho1_input, rho2  = rho2_input)
+        K2_trt <- calc_K_comb_outcome(m = m_input, power = power_input,
+                                      alpha = alpha_input, r = r_input,
+                                      beta1 = beta1_input, beta2 = beta2_input,
+                                      varY1 = varY1_input, varY2 = varY2_input,
+                                      rho01 = rho01_input, rho02 = rho02_input,
+                                      rho1 = rho1_input,
+                                      rho2 = rho2_input)$`Treatment (K)`[[1]]
+        K2_ctl <- calc_K_comb_outcome(m = m_input, power = power_input,
+                                      alpha = alpha_input, r = r_input,
+                                      beta1 = beta1_input, beta2 = beta2_input,
+                                      varY1 = varY1_input, varY2 = varY2_input,
+                                      rho01 = rho01_input, rho02 = rho02_input,
+                                      rho1 = rho1_input,
+                                      rho2 = rho2_input)$`Control (K)`[[1]]
 
-      K3 <- calc_K_single_1dftest(power = power_input, m = m_input,
-                                  alpha = alpha_input, r = r_input,
-                                  beta1 = beta1_input, beta2 = beta2_input,
-                                  varY1 = varY1_input, varY2 = varY2_input,
-                                  rho01 = rho01_input, rho02 = rho02_input,
-                                  rho1 = rho1_input, rho2  = rho2_input)
+        K3_trt <- calc_K_single_1dftest(power = power_input, m = m_input,
+                                        alpha = alpha_input, r = r_input,
+                                        beta1 = beta1_input, beta2 = beta2_input,
+                                        varY1 = varY1_input, varY2 = varY2_input,
+                                        rho01 = rho01_input, rho02 = rho02_input,
+                                        rho1 = rho1_input,
+                                        rho2 = rho2_input)$`Treatment (K)`[[1]]
+        K3_ctl <- calc_K_single_1dftest(power = power_input, m = m_input,
+                                        alpha = alpha_input, r = r_input,
+                                        beta1 = beta1_input, beta2 = beta2_input,
+                                        varY1 = varY1_input, varY2 = varY2_input,
+                                        rho01 = rho01_input, rho02 = rho02_input,
+                                        rho1 = rho1_input,
+                                        rho2 = rho2_input)$`Control (K)`[[1]]
 
-      K4_F <- calc_K_disj_2dftest(power = power_input, m = m_input,
-                                  alpha = alpha_input, r = r_input,
-                                  beta1 = beta1_input, beta2 = beta2_input,
-                                  varY1 = varY1_input, varY2 = varY2_input,
-                                  rho01 = rho01_input, rho02 = rho02_input,
-                                  rho1 = rho1_input, rho2  = rho2_input,
-                                  dist = "F")
+        K4_F_trt <- calc_K_disj_2dftest(power = power_input, m = m_input,
+                                        alpha = alpha_input, r = r_input,
+                                        beta1 = beta1_input, beta2 = beta2_input,
+                                        varY1 = varY1_input, varY2 = varY2_input,
+                                        rho01 = rho01_input, rho02 = rho02_input,
+                                        rho1 = rho1_input, rho2  = rho2_input,
+                                        dist = "F")$`Treatment (K)`[[1]]
+        K4_F_ctl <- calc_K_disj_2dftest(power = power_input, m = m_input,
+                                        alpha = alpha_input, r = r_input,
+                                        beta1 = beta1_input, beta2 = beta2_input,
+                                        varY1 = varY1_input, varY2 = varY2_input,
+                                        rho01 = rho01_input, rho02 = rho02_input,
+                                        rho1 = rho1_input, rho2  = rho2_input,
+                                        dist = "F")$`Control (K)`[[1]]
 
-      K4_Chi2 <- calc_K_disj_2dftest(power = power_input, m = m_input,
+        K4_Chi2_trt <- calc_K_disj_2dftest(power = power_input, m = m_input,
+                                           alpha = alpha_input, r = r_input,
+                                           beta1 = beta1_input, beta2 = beta2_input,
+                                           varY1 = varY1_input, varY2 = varY2_input,
+                                           rho01 = rho01_input, rho02 = rho02_input,
+                                           rho1 = rho1_input, rho2  = rho2_input,
+                                           dist = "Chi2")$`Treatment (K)`[[1]]
+        K4_Chi2_ctl <- calc_K_disj_2dftest(power = power_input, m = m_input,
+                                           alpha = alpha_input, r = r_input,
+                                           beta1 = beta1_input, beta2 = beta2_input,
+                                           varY1 = varY1_input, varY2 = varY2_input,
+                                           rho01 = rho01_input, rho02 = rho02_input,
+                                           rho1 = rho1_input, rho2  = rho2_input,
+                                           dist = "Chi2")$`Control (K)`[[1]]
+
+        K5_T_trt <- calc_K_conj_test(power = power_input, m = m_input,
                                      alpha = alpha_input, r = r_input,
                                      beta1 = beta1_input, beta2 = beta2_input,
                                      varY1 = varY1_input, varY2 = varY2_input,
                                      rho01 = rho01_input, rho02 = rho02_input,
                                      rho1 = rho1_input, rho2  = rho2_input,
-                                     dist = "Chi2")
+                                     dist = "T")$`Treatment (K)`[[1]]
+        K5_T_ctl <- calc_K_conj_test(power = power_input, m = m_input,
+                                     alpha = alpha_input, r = r_input,
+                                     beta1 = beta1_input, beta2 = beta2_input,
+                                     varY1 = varY1_input, varY2 = varY2_input,
+                                     rho01 = rho01_input, rho02 = rho02_input,
+                                     rho1 = rho1_input, rho2  = rho2_input,
+                                     dist = "T")$`Control (K)`[[1]]
 
-      K5_T <- calc_K_conj_test(power = power_input, m = m_input,
-                               alpha = alpha_input, r = r_input,
-                               beta1 = beta1_input, beta2 = beta2_input,
-                               varY1 = varY1_input, varY2 = varY2_input,
-                               rho01 = rho01_input, rho02 = rho02_input,
-                               rho1 = rho1_input, rho2  = rho2_input,
-                               dist = "T")
+        K5_MVN_trt <- calc_K_conj_test(power = power_input, m = m_input,
+                                       alpha = alpha_input, r = r_input,
+                                       beta1 = beta1_input, beta2 = beta2_input,
+                                       varY1 = varY1_input, varY2 = varY2_input,
+                                       rho01 = rho01_input, rho02 = rho02_input,
+                                       rho1 = rho1_input, rho2  = rho2_input,
+                                       dist = "MVN")$`Treatment (K)`[[1]]
+        K5_MVN_ctl <- calc_K_conj_test(power = power_input, m = m_input,
+                                       alpha = alpha_input, r = r_input,
+                                       beta1 = beta1_input, beta2 = beta2_input,
+                                       varY1 = varY1_input, varY2 = varY2_input,
+                                       rho01 = rho01_input, rho02 = rho02_input,
+                                       rho1 = rho1_input, rho2  = rho2_input,
+                                       dist = "MVN")$`Control (K)`[[1]]
 
-      K5_MVN <- calc_K_conj_test(power = power_input, m = m_input,
-                                 alpha = alpha_input, r = r_input,
-                                 beta1 = beta1_input, beta2 = beta2_input,
-                                 varY1 = varY1_input, varY2 = varY2_input,
-                                 rho01 = rho01_input, rho02 = rho02_input,
-                                 rho1 = rho1_input, rho2  = rho2_input,
-                                 dist = "MVN")
+      } else{
+        K1_bonf_trt <- calc_K_pval_adj(m = m_input, power = power_input,
+                                       alpha = alpha_input,
+                                       beta1 = beta1_input, beta2 = beta2_input,
+                                       varY1 = varY1_input, varY2 = varY2_input,
+                                       rho01 = rho01_input, rho02 = rho02_input,
+                                       rho2  = rho2_input,
+                                       r = r_input)$`Final Treatment (K1)`[[1]]
+        K1_bonf_ctl <- calc_K_pval_adj(m = m_input, power = power_input,
+                                       alpha = alpha_input,
+                                       beta1 = beta1_input, beta2 = beta2_input,
+                                       varY1 = varY1_input, varY2 = varY2_input,
+                                       rho01 = rho01_input, rho02 = rho02_input,
+                                       rho2  = rho2_input,
+                                       r = r_input)$`Final Control (K2)`[[1]]
+
+        K1_sidak_trt <- calc_K_pval_adj(m = m_input, power = power_input,
+                                        alpha = alpha_input,
+                                        beta1 = beta1_input, beta2 = beta2_input,
+                                        varY1 = varY1_input, varY2 = varY2_input,
+                                        rho01 = rho01_input, rho02 = rho02_input,
+                                        rho2  = rho2_input,
+                                        r = r_input)$`Final Treatment (K1)`[[2]]
+        K1_sidak_ctl <- calc_K_pval_adj(m = m_input, power = power_input,
+                                        alpha = alpha_input,
+                                        beta1 = beta1_input, beta2 = beta2_input,
+                                        varY1 = varY1_input, varY2 = varY2_input,
+                                        rho01 = rho01_input, rho02 = rho02_input,
+                                        rho2  = rho2_input,
+                                        r = r_input)$`Final Control (K2)`[[2]]
+
+        K1_dap_trt <- calc_K_pval_adj(m = m_input, power = power_input,
+                                      alpha = alpha_input,
+                                      beta1 = beta1_input, beta2 = beta2_input,
+                                      varY1 = varY1_input, varY2 = varY2_input,
+                                      rho01 = rho01_input, rho02 = rho02_input,
+                                      rho2  = rho2_input,
+                                      r = r_input)$`Final Treatment (K1)`[[3]]
+        K1_dap_ctl <- calc_K_pval_adj(m = m_input, power = power_input,
+                                      alpha = alpha_input,
+                                      beta1 = beta1_input, beta2 = beta2_input,
+                                      varY1 = varY1_input, varY2 = varY2_input,
+                                      rho01 = rho01_input, rho02 = rho02_input,
+                                      rho2  = rho2_input,
+                                      r = r_input)$`Final Control (K2)`[[3]]
+
+        K2_trt <- calc_K_comb_outcome(m = m_input, power = power_input,
+                                      alpha = alpha_input, r = r_input,
+                                      beta1 = beta1_input, beta2 = beta2_input,
+                                      varY1 = varY1_input, varY2 = varY2_input,
+                                      rho01 = rho01_input, rho02 = rho02_input,
+                                      rho1 = rho1_input,
+                                      rho2 = rho2_input)$`Treatment (K1)`[[1]]
+        K2_ctl <- calc_K_comb_outcome(m = m_input, power = power_input,
+                                      alpha = alpha_input, r = r_input,
+                                      beta1 = beta1_input, beta2 = beta2_input,
+                                      varY1 = varY1_input, varY2 = varY2_input,
+                                      rho01 = rho01_input, rho02 = rho02_input,
+                                      rho1 = rho1_input,
+                                      rho2 = rho2_input)$`Control (K2)`[[1]]
+
+        K3_trt <- calc_K_single_1dftest(power = power_input, m = m_input,
+                                        alpha = alpha_input, r = r_input,
+                                        beta1 = beta1_input, beta2 = beta2_input,
+                                        varY1 = varY1_input, varY2 = varY2_input,
+                                        rho01 = rho01_input, rho02 = rho02_input,
+                                        rho1 = rho1_input,
+                                        rho2 = rho2_input)$`Treatment (K1)`[[1]]
+        K3_ctl <- calc_K_single_1dftest(power = power_input, m = m_input,
+                                        alpha = alpha_input, r = r_input,
+                                        beta1 = beta1_input, beta2 = beta2_input,
+                                        varY1 = varY1_input, varY2 = varY2_input,
+                                        rho01 = rho01_input, rho02 = rho02_input,
+                                        rho1 = rho1_input,
+                                        rho2 = rho2_input)$`Control (K2)`[[1]]
+
+        K4_F_trt <- calc_K_disj_2dftest(power = power_input, m = m_input,
+                                        alpha = alpha_input, r = r_input,
+                                        beta1 = beta1_input, beta2 = beta2_input,
+                                        varY1 = varY1_input, varY2 = varY2_input,
+                                        rho01 = rho01_input, rho02 = rho02_input,
+                                        rho1 = rho1_input, rho2  = rho2_input,
+                                        dist = "F")$`Treatment (K1)`[[1]]
+        K4_F_ctl <- calc_K_disj_2dftest(power = power_input, m = m_input,
+                                        alpha = alpha_input, r = r_input,
+                                        beta1 = beta1_input, beta2 = beta2_input,
+                                        varY1 = varY1_input, varY2 = varY2_input,
+                                        rho01 = rho01_input, rho02 = rho02_input,
+                                        rho1 = rho1_input, rho2  = rho2_input,
+                                        dist = "F")$`Control (K2)`[[1]]
+
+        K4_Chi2_trt <- calc_K_disj_2dftest(power = power_input, m = m_input,
+                                           alpha = alpha_input, r = r_input,
+                                           beta1 = beta1_input, beta2 = beta2_input,
+                                           varY1 = varY1_input, varY2 = varY2_input,
+                                           rho01 = rho01_input, rho02 = rho02_input,
+                                           rho1 = rho1_input, rho2  = rho2_input,
+                                           dist = "Chi2")$`Treatment (K1)`[[1]]
+        K4_Chi2_ctl <- calc_K_disj_2dftest(power = power_input, m = m_input,
+                                           alpha = alpha_input, r = r_input,
+                                           beta1 = beta1_input, beta2 = beta2_input,
+                                           varY1 = varY1_input, varY2 = varY2_input,
+                                           rho01 = rho01_input, rho02 = rho02_input,
+                                           rho1 = rho1_input, rho2  = rho2_input,
+                                           dist = "Chi2")$`Control (K2)`[[1]]
+
+        K5_T_trt <- calc_K_conj_test(power = power_input, m = m_input,
+                                     alpha = alpha_input, r = r_input,
+                                     beta1 = beta1_input, beta2 = beta2_input,
+                                     varY1 = varY1_input, varY2 = varY2_input,
+                                     rho01 = rho01_input, rho02 = rho02_input,
+                                     rho1 = rho1_input, rho2  = rho2_input,
+                                     dist = "T")$`Treatment (K1)`[[1]]
+        K5_T_ctl <- calc_K_conj_test(power = power_input, m = m_input,
+                                     alpha = alpha_input, r = r_input,
+                                     beta1 = beta1_input, beta2 = beta2_input,
+                                     varY1 = varY1_input, varY2 = varY2_input,
+                                     rho01 = rho01_input, rho02 = rho02_input,
+                                     rho1 = rho1_input, rho2  = rho2_input,
+                                     dist = "T")$`Control (K2)`[[1]]
+
+        K5_MVN_trt <- calc_K_conj_test(power = power_input, m = m_input,
+                                       alpha = alpha_input, r = r_input,
+                                       beta1 = beta1_input, beta2 = beta2_input,
+                                       varY1 = varY1_input, varY2 = varY2_input,
+                                       rho01 = rho01_input, rho02 = rho02_input,
+                                       rho1 = rho1_input, rho2  = rho2_input,
+                                       dist = "MVN")$`Treatment (K1)`[[1]]
+        K5_MVN_ctl <- calc_K_conj_test(power = power_input, m = m_input,
+                                       alpha = alpha_input, r = r_input,
+                                       beta1 = beta1_input, beta2 = beta2_input,
+                                       varY1 = varY1_input, varY2 = varY2_input,
+                                       rho01 = rho01_input, rho02 = rho02_input,
+                                       rho1 = rho1_input, rho2  = rho2_input,
+                                       dist = "MVN")$`Control (K2)`[[1]]
+      }
 
       # Create a data frame with the results
       data.frame(
         Function = c("P-Value Adj. (Bonferonni)", "P-Value Adj. (Sidak)",
                      "P-Value Adj. (D/AP)", "Combined Outcomes",
                      "Single Weighted", "Disjunctive F-dist",
+                     "Disjunctive Chi2", "Conjunctive T", "Conjunctive MVN",
+                     "P-Value Adj. (Bonferonni)", "P-Value Adj. (Sidak)",
+                     "P-Value Adj. (D/AP)", "Combined Outcomes",
+                     "Single Weighted", "Disjunctive F-dist",
                      "Disjunctive Chi2", "Conjunctive T", "Conjunctive MVN"),
-        Value = c(K1_bonf, K1_sidak, K1_dap,
-                  K2, K3, K4_F, K4_Chi2, K5_T, K5_MVN),
-        Fill = c(1, 1, 1, 2, 3, 4, 4, 5, 5)
+        Value = c(K1_bonf_trt, K1_sidak_trt, K1_dap_trt,
+                  K2_trt, K3_trt,
+                  K4_F_trt, K4_Chi2_trt,
+                  K5_T_trt, K5_MVN_trt,
+                  K1_bonf_ctl, K1_sidak_ctl, K1_dap_ctl,
+                  K2_ctl, K3_ctl,
+                  K4_F_ctl, K4_Chi2_ctl,
+                  K5_T_ctl, K5_MVN_ctl),
+        Group = c("Treatment", "Treatment", "Treatment",
+                  "Treatment", "Treatment", "Treatment",
+                  "Treatment", "Treatment", "Treatment",
+                  "Control", "Control", "Control", "Control", "Control",
+                  "Control", "Control", "Control", "Control"),
+        Order = c(1, 1, 1, 2, 3, 4, 4, 5, 5,
+                  1, 1, 1, 2, 3, 4, 4, 5, 5)
       )
     } else {
       data.frame(
@@ -225,13 +461,15 @@ server <- function(input, output) {
     # Check if the data frame is empty
     if (nrow(df) > 0) {
       # Create the bar graph using ggplot2
-      print(ggplot(df, aes(x = reorder(Function, Fill), y = Value, fill = as.factor(Fill))) +
-              geom_bar(stat = "identity") +
-              ylab("K") +
+      print(ggplot(df, aes(x = reorder(Function, Order),
+                           y = Value, fill = Group)) +
+              geom_bar(stat = "identity", position = 'dodge') +
+              ylab("Number of clusters") +
               xlab("Design Method") +
-              geom_text(aes(label = Value), vjust = -0.5, size = 4) +
-              ggtitle("Figure 2. Calculations for K - number of clusters in treatment group") +
-              theme(legend.position = "none"))
+              geom_text(aes(label = Value),
+                        position = position_dodge(width = 0.9),
+                        vjust = -0.5, size = 4) +
+              ggtitle("Figure 2. Results for number of clusters in treatment group (K1) and control group (K2)"))
     }
   })
 
@@ -251,6 +489,19 @@ server <- function(input, output) {
     rho02_input <- as.numeric(input$rho02_m)
     rho1_input <- as.numeric(input$rho1_m)
     rho2_input <- as.numeric(input$rho2_m)
+
+    # r_input <- 0.5
+    # power_input <- 0.8
+    # K_input <- 30
+    # alpha_input <- 0.05
+    # beta1_input <- 0.1
+    # beta2_input <- 0.1
+    # varY1_input <- 0.23
+    # varY2_input <- 0.25
+    # rho01_input <- 0.025
+    # rho02_input <- 0.025
+    # rho1_input <- 0.01
+    # rho2_input <- 0.05
 
     # Ensure inputs are not empty
     if (!is.na(r_input) && !is.na(power_input) && !is.na(K_input) && !is.na(alpha_input) && !is.na(beta1_input) && !is.na(beta2_input) && !is.na(varY1_input) && !is.na(varY2_input) && !is.na(rho01_input) && !is.na(rho02_input) && !is.na(rho1_input) && !is.na(rho2_input)) {
@@ -346,13 +597,12 @@ server <- function(input, output) {
     # Check if the data frame is empty
     if (nrow(df) > 0) {
       # Create the bar graph using ggplot2
-      ggplot(df, aes(x = reorder(Function, Fill), y = Value, fill = as.factor(Fill))) +
-        geom_bar(stat = "identity") +
+      ggplot(df, aes(x = reorder(Function, Fill), y = Value)) +
+        geom_bar(stat = "identity", fill = 'purple') +
         ylab("m") +
         xlab("Design Method") +
         geom_text(aes(label = Value), vjust = -0.5, size = 4) +
-        ggtitle("Figure 3. Calculations for m - number of individuals in each cluster") +
-        theme(legend.position = "none")
+        ggtitle("Figure 3. Results for number of individuals per cluster (m)")
     }
   })
 }
