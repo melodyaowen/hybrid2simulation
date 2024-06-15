@@ -28,6 +28,47 @@ ui <- fluidPage(
   p("This ShinyApp lets the user calculate the number of clusters in the treatment group ($K$), cluster size ($m$), or statistical power ($\\pi$) from the user's desired input parameters. Calculations are done using the R package `crt2power`."),
 
   # Third section (m) -------------
+  p("Calculate $K$: number of clusters in treatment group", style = "color:blue; font-size:25px"),
+
+  p("Input Parameters", style = "font-size:20px"),
+
+  # Inputs at the top
+  fluidRow(
+    column(3,
+           textInput("power_K", "Power:", value = ""),
+           textInput("beta1_K", "Effect for Y1:", value = ""),
+           textInput("beta2_K", "Effect for Y2:", value = ""),
+           textInput("alpha_K", "Type I error:", value = "")
+    ),
+    column(3,
+           textInput("m_K", "m:", value = ""),
+           textInput("varY1_K", "Total variance of Y1:", value = ""),
+           textInput("varY2_K", "Total variance of Y2:", value = ""),
+           textInput("rho1_K", "Inter-subject between-endpoint ICC:", value = "")
+    ),
+    column(3,
+           textInput("r_K", "Treatment allocation ratio:", value = ""),
+           textInput("rho01_K", "ICC for Y1:", value = ""),
+           textInput("rho02_K", "ICC for Y2:", value = ""),
+           textInput("rho2_K", "Intra-subject between-endpoint ICC:", value = "")
+    )
+  ),
+
+  # Action button to trigger the calculation
+  fluidRow(
+    column(12,
+           actionButton("calcButton2", "Calculate")
+    )
+  ),
+
+  # Output: Bargraph
+  fluidRow(
+    column(12,
+           plotOutput("bargraph2")
+    )
+  ),
+
+  # Third section (m) -------------
   p("Calculate $m$: number of individuals per cluster", style = "color:blue; font-size:25px"),
 
   p("Input Parameters", style = "font-size:20px"),
@@ -35,22 +76,22 @@ ui <- fluidPage(
   # Inputs at the top
   fluidRow(
     column(3,
-           textInput("power", "Power:", value = ""),
-           textInput("beta1", "Effect for Y1:", value = ""),
-           textInput("beta2", "Effect for Y2:", value = ""),
-           textInput("alpha", "Type I error:", value = "")
+           textInput("power_m", "Power:", value = ""),
+           textInput("beta1_m", "Effect for Y1:", value = ""),
+           textInput("beta2_m", "Effect for Y2:", value = ""),
+           textInput("alpha_m", "Type I error:", value = "")
     ),
     column(3,
-           textInput("K", "K (# clusters in treatment group):", value = ""),
-           textInput("varY1", "Total variance of Y1:", value = ""),
-           textInput("varY2", "Total variance of Y2:", value = ""),
-           textInput("rho1", "Inter-subject between-endpoint ICC:", value = "")
+           textInput("K_m", "K (# clusters in treatment group):", value = ""),
+           textInput("varY1_m", "Total variance of Y1:", value = ""),
+           textInput("varY2_m", "Total variance of Y2:", value = ""),
+           textInput("rho1_m", "Inter-subject between-endpoint ICC:", value = "")
     ),
     column(3,
-           textInput("r", "Treatment allocation ratio:", value = ""),
-           textInput("rho01", "ICC for Y1:", value = ""),
-           textInput("rho02", "ICC for Y2:", value = ""),
-           textInput("rho2", "Intra-subject between-endpoint ICC:", value = "")
+           textInput("r_m", "Treatment allocation ratio:", value = ""),
+           textInput("rho01_m", "ICC for Y1:", value = ""),
+           textInput("rho02_m", "ICC for Y2:", value = ""),
+           textInput("rho2_m", "Intra-subject between-endpoint ICC:", value = "")
     )
   ),
 
@@ -72,22 +113,144 @@ ui <- fluidPage(
 # Define server logic
 server <- function(input, output) {
 
+  # Section results 2 (K) ---------------
+  # Reactive expression to run the functions and create the data frame
+  results2 <- eventReactive(input$calcButton2, {
+    # Get user inputs
+    r_input <- as.numeric(input$r_K)
+    power_input <- as.numeric(input$power_K)
+    m_input <- as.numeric(input$m_K)
+    alpha_input <- as.numeric(input$alpha_K)
+    beta1_input <- as.numeric(input$beta1_K)
+    beta2_input <- as.numeric(input$beta2_K)
+    varY1_input <- as.numeric(input$varY1_K)
+    varY2_input <- as.numeric(input$varY2_K)
+    rho01_input <- as.numeric(input$rho01_K)
+    rho02_input <- as.numeric(input$rho02_K)
+    rho1_input <- as.numeric(input$rho1_K)
+    rho2_input <- as.numeric(input$rho2_K)
+
+    # Ensure inputs are not empty
+    if (!is.na(r_input) && !is.na(power_input) && !is.na(m_input) && !is.na(alpha_input) && !is.na(beta1_input) && !is.na(beta2_input) && !is.na(varY1_input) && !is.na(varY2_input) && !is.na(rho01_input) && !is.na(rho02_input) && !is.na(rho1_input) && !is.na(rho2_input)) {
+      K1_bonf <- calc_K_pval_adj(m = m_input, power = power_input,
+                                 alpha = alpha_input,
+                                 beta1 = beta1_input, beta2 = beta2_input,
+                                 varY1 = varY1_input, varY2 = varY2_input,
+                                 rho01 = rho01_input, rho02 = rho02_input,
+                                 rho2  = rho2_input, r = r_input)$`Final Treatment (K)`[[1]]
+
+      K1_sidak <- calc_K_pval_adj(m = m_input, power = power_input,
+                                  alpha = alpha_input,
+                                  beta1 = beta1_input, beta2 = beta2_input,
+                                  varY1 = varY1_input, varY2 = varY2_input,
+                                  rho01 = rho01_input, rho02 = rho02_input,
+                                  rho2  = rho2_input, r = r_input)$`Final Treatment (K)`[[2]]
+
+      K1_dap <- calc_K_pval_adj(m = m_input, power = power_input,
+                                alpha = alpha_input,
+                                beta1 = beta1_input, beta2 = beta2_input,
+                                varY1 = varY1_input, varY2 = varY2_input,
+                                rho01 = rho01_input, rho02 = rho02_input,
+                                rho2  = rho2_input, r = r_input)$`Final Treatment (K)`[[3]]
+
+      K2 <- calc_K_comb_outcome(m = m_input, power = power_input,
+                                alpha = alpha_input, r = r_input,
+                                beta1 = beta1_input, beta2 = beta2_input,
+                                varY1 = varY1_input, varY2 = varY2_input,
+                                rho01 = rho01_input, rho02 = rho02_input,
+                                rho1 = rho1_input, rho2  = rho2_input)
+
+      K3 <- calc_K_single_1dftest(power = power_input, m = m_input,
+                                  alpha = alpha_input, r = r_input,
+                                  beta1 = beta1_input, beta2 = beta2_input,
+                                  varY1 = varY1_input, varY2 = varY2_input,
+                                  rho01 = rho01_input, rho02 = rho02_input,
+                                  rho1 = rho1_input, rho2  = rho2_input)
+
+      K4_F <- calc_K_disj_2dftest(power = power_input, m = m_input,
+                                  alpha = alpha_input, r = r_input,
+                                  beta1 = beta1_input, beta2 = beta2_input,
+                                  varY1 = varY1_input, varY2 = varY2_input,
+                                  rho01 = rho01_input, rho02 = rho02_input,
+                                  rho1 = rho1_input, rho2  = rho2_input,
+                                  dist = "F")
+
+      K4_Chi2 <- calc_K_disj_2dftest(power = power_input, m = m_input,
+                                     alpha = alpha_input, r = r_input,
+                                     beta1 = beta1_input, beta2 = beta2_input,
+                                     varY1 = varY1_input, varY2 = varY2_input,
+                                     rho01 = rho01_input, rho02 = rho02_input,
+                                     rho1 = rho1_input, rho2  = rho2_input,
+                                     dist = "Chi2")
+
+      K5_T <- calc_K_conj_test(power = power_input, m = m_input,
+                               alpha = alpha_input, r = r_input,
+                               beta1 = beta1_input, beta2 = beta2_input,
+                               varY1 = varY1_input, varY2 = varY2_input,
+                               rho01 = rho01_input, rho02 = rho02_input,
+                               rho1 = rho1_input, rho2  = rho2_input,
+                               dist = "T")
+
+      K5_MVN <- calc_K_conj_test(power = power_input, m = m_input,
+                                 alpha = alpha_input, r = r_input,
+                                 beta1 = beta1_input, beta2 = beta2_input,
+                                 varY1 = varY1_input, varY2 = varY2_input,
+                                 rho01 = rho01_input, rho02 = rho02_input,
+                                 rho1 = rho1_input, rho2  = rho2_input,
+                                 dist = "MVN")
+
+      # Create a data frame with the results
+      data.frame(
+        Function = c("P-Value Adj. (Bonferonni)", "P-Value Adj. (Sidak)",
+                     "P-Value Adj. (D/AP)", "Combined Outcomes",
+                     "Single Weighted", "Disjunctive F-dist",
+                     "Disjunctive Chi2", "Conjunctive T", "Conjunctive MVN"),
+        Value = c(K1_bonf, K1_sidak, K1_dap,
+                  K2, K3, K4_F, K4_Chi2, K5_T, K5_MVN),
+        Fill = c(1, 1, 1, 2, 3, 4, 4, 5, 5)
+      )
+    } else {
+      data.frame(
+        Function = character(0),
+        Value = numeric(0)
+      )
+    }
+  })
+
+  # Output the bargraph 2 for K -------------
+  output$bargraph2 <- renderPlot({
+    # Get the results
+    df <- results2()
+
+    # Check if the data frame is empty
+    if (nrow(df) > 0) {
+      # Create the bar graph using ggplot2
+      print(ggplot(df, aes(x = reorder(Function, Fill), y = Value, fill = as.factor(Fill))) +
+              geom_bar(stat = "identity") +
+              ylab("K") +
+              xlab("Design Method") +
+              geom_text(aes(label = Value), vjust = -0.5, size = 4) +
+              ggtitle("Figure 2. Calculations for K - number of clusters in treatment group") +
+              theme(legend.position = "none"))
+    }
+  })
+
   # Section results 3 (m) ---------------
   # Reactive expression to run the functions and create the data frame
   results3 <- eventReactive(input$calcButton3, {
     # Get user inputs
-    r_input <- as.numeric(input$r)
-    power_input <- as.numeric(input$power)
-    K_input <- as.numeric(input$K)
-    alpha_input <- as.numeric(input$alpha)
-    beta1_input <- as.numeric(input$beta1)
-    beta2_input <- as.numeric(input$beta2)
-    varY1_input <- as.numeric(input$varY1)
-    varY2_input <- as.numeric(input$varY2)
-    rho01_input <- as.numeric(input$rho01)
-    rho02_input <- as.numeric(input$rho02)
-    rho1_input <- as.numeric(input$rho1)
-    rho2_input <- as.numeric(input$rho2)
+    r_input <- as.numeric(input$r_m)
+    power_input <- as.numeric(input$power_m)
+    K_input <- as.numeric(input$K_m)
+    alpha_input <- as.numeric(input$alpha_m)
+    beta1_input <- as.numeric(input$beta1_m)
+    beta2_input <- as.numeric(input$beta2_m)
+    varY1_input <- as.numeric(input$varY1_m)
+    varY2_input <- as.numeric(input$varY2_m)
+    rho01_input <- as.numeric(input$rho01_m)
+    rho02_input <- as.numeric(input$rho02_m)
+    rho1_input <- as.numeric(input$rho1_m)
+    rho2_input <- as.numeric(input$rho2_m)
 
     # Ensure inputs are not empty
     if (!is.na(r_input) && !is.na(power_input) && !is.na(K_input) && !is.na(alpha_input) && !is.na(beta1_input) && !is.na(beta2_input) && !is.na(varY1_input) && !is.na(varY2_input) && !is.na(rho01_input) && !is.na(rho02_input) && !is.na(rho1_input) && !is.na(rho2_input)) {
