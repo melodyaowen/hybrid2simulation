@@ -27,7 +27,30 @@ ui <- page_navbar(
         });
       })
     </script>'),
-    tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+    #tags$link(rel = "stylesheet", type = "text/css", href = "styles.css"),
+    tags$style(HTML("
+      .my_table .table > thead > tr > th {
+        background-color: #FF69B4;
+        color: white;
+        padding: 8px; /* Adjust padding as needed */
+        text-align: left;
+        vertical-align: middle;
+        border-top: 2px solid #FF69B4;
+        border-left: 2px solid #FF69B4; /* Left border for header */;
+        border-right: 2px solid #FF69B4; /* Right border for header */
+      }
+
+      .my_table .table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
+        padding: 4px;
+        text-align: left;
+        line-height: 1.42857143;
+        vertical-align: middle;
+        border-top: 2px solid #FF69B4;
+        border-left: 2px solid #FF69B4;
+        border-right: 2px solid #FF69B4;
+        border-bottom: 2px solid #FF69B4;
+      }
+    "))
   ),
 
   title = "`crt2power` Application",
@@ -48,11 +71,18 @@ ui <- page_navbar(
               column(4, card(
                 card_header("Overview"),
                 "This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package `crt2power`."
-              )),
+              ),
+              card(card_header("Contact"), "Text")),
 
               column(8, card(
                 card_header("Guide to Input Parameters"),
-                withMathJax(), tableOutput('overviewTable')
+                withMathJax(),
+                tags$div(
+                  class="my_table",
+                  tableOutput('overviewTable')
+                ),
+                p("1. This assumes equal treatment allocation. To be more precise, we often refer to the number of clusters in the treatment group as $K_1$, and the number of clusters in the control group as $K_2$.")
+
               ))
 
             ),
@@ -848,58 +878,58 @@ server <- function(input, output) {
 
   output$overviewTable <- renderTable({
     myTable <- data.frame(
-      `Parameter` = c("$$\\text{Statistical power}$$",
-                      "$$\\text{Number of clusters}$$",
-                      "$$\\text{Cluster size}$$",
-                      "$$\\text{Family-wise false positive rate}$$",
-                      "$$\\text{Effect for }Y_1$$",
-                      "$$\\text{Effect for }Y_2$$",
-                      "$$\\text{Total variance of }Y_1$$",
-                      "$$\\text{Total variance of }Y_2$$",
-                      "$$\\text{Endpoint-specific ICC for }Y_1$$",
-                      "$$\\text{Endpoint-specific ICC for }Y_2$$",
-                      "$$\\text{Inter-subject between-endpoint ICC}$$",
-                      "$$\\text{Intra-subject between-endpoint ICC}$$",
-                      "$$\\text{Treatment allocation ratio}$$"),
-      `Statistical Notation` = c("$$\\pi$$",
-                                 "$$K$$",
-                                 "$$m$$",
-                                 "$$\\alpha$$",
-                                 "$$\\beta_1^*$$",
-                                 "$$\\beta_2^*$$",
-                                 "$$\\sigma_1^2$$",
-                                 "$$\\sigma_2^2$$",
-                                 "$$\\rho_0^{(1)}$$",
-                                 "$$\\rho_0^{(2)}$$",
-                                 "$$\\rho_1^{(1,2)}$$",
-                                 "$$\\rho_2^{(1,2)}$$",
-                                 "$$r$$"),
-      `Variable Name in Package` = c("$$\\text{power}$$",
-                                     "$$\\text{K}$$",
-                                     "$$\\text{m}$$",
-                                     "$$\\text{alpha}$$",
-                                     "$$\\text{beta1}$$",
-                                     "$$\\text{beta2}$$",
-                                     "$$\\text{varY1}$$",
-                                     "$$\\text{varY2}$$",
-                                     "$$\\text{rho01}$$",
-                                     "$$\\text{rho02}$$",
-                                     "$$\\text{rho1}$$",
-                                     "$$\\text{rho2}$$",
-                                     "$$\\text{r}$$"),
-      `Description` = c("$$\\text{Probability of detecting a true effect under } H_A$$",
-                        "$$\\text{Number of clusters in each treatment arm}$$",
-                        "$$\\text{Number of individuals in each cluster}$$",
-                        "$$\\text{Probability of one or more Type I error(s)}$$",
-                        "$$\\text{Estimated intervention effect on the first outcome }(Y_1)$$",
-                        "$$\\text{Estimated intervention effect on the second outcome }(Y_2)$$",
-                        "$$\\text{Total variance of the first outcome, } Y_1$$",
-                        "$$\\text{Total variance of the second outcome, } Y_2$$",
-                        "$$\\text{Correlation for } Y_1 \\text{ for two different individuals in the same cluster}$$",
-                        "$$\\text{Correlation for } Y_2 \\text{ for two different individuals in the same cluster}$$",
-                        "$$\\text{Correlation between } Y_1 \\text{ and } Y_2 \\text{ for two different individuals in the same cluster}$$",
-                        "$$\\text{Correlation between } Y_1 \\text{ and } Y_2 \\text{ for the same individual}$$",
-                        "$$\\text{Treatment allocation ratio; } K_2 = rK_1 \\text{ where } K_1 \\text{ is number of clusters in experimental group}$$")
+      `Parameter` = c("\\(\\text{Statistical power}\\)",
+                      "\\(\\text{Number of clusters}\\)",
+                      "\\(\\text{Cluster size}\\)",
+                      "\\(\\text{Family-wise false positive rate}\\)",
+                      "\\(\\text{Effect for }Y_1\\)",
+                      "\\(\\text{Effect for }Y_2\\)",
+                      "\\(\\text{Total variance of }Y_1\\)",
+                      "\\(\\text{Total variance of }Y_2\\)",
+                      "\\(\\text{Endpoint-specific ICC for }Y_1\\)",
+                      "\\(\\text{Endpoint-specific ICC for }Y_2\\)",
+                      "\\(\\text{Inter-subject between-endpoint ICC}\\)",
+                      "\\(\\text{Intra-subject between-endpoint ICC}\\)",
+                      "\\(\\text{Treatment allocation ratio}\\)"),
+      `Notation` = c("\\(\\pi\\)",
+                                 "\\(K\\)",
+                                 "\\(m\\)",
+                                 "\\(\\alpha\\)",
+                                 "\\(\\beta_1^*\\)",
+                                 "\\(\\beta_2^*\\)",
+                                 "\\(\\sigma_1^2\\)",
+                                 "\\(\\sigma_2^2\\)",
+                                 "\\(\\rho_0^{(1)}\\)",
+                                 "\\(\\rho_0^{(2)}\\)",
+                                 "\\(\\rho_1^{(1,2)}\\)",
+                                 "\\(\\rho_2^{(1,2)}\\)",
+                                 "\\(r\\)"),
+      `Variable` = c("\\(\\text{power}\\)",
+                                     "\\(\\text{K}\\)",
+                                     "\\(\\text{m}\\)",
+                                     "\\(\\text{alpha}\\)",
+                                     "\\(\\text{beta1}\\)",
+                                     "\\(\\text{beta2}\\)",
+                                     "\\(\\text{varY1}\\)",
+                                     "\\(\\text{varY2}\\)",
+                                     "\\(\\text{rho01}\\)",
+                                     "\\(\\text{rho02}\\)",
+                                     "\\(\\text{rho1}\\)",
+                                     "\\(\\text{rho2}\\)",
+                                     "\\(\\text{r}\\)"),
+      `Description` = c("\\(\\text{Probability of detecting a true effect under } H_A\\)",
+                        "\\(\\text{Number of clusters in each treatment arm}^1\\)",
+                        "\\(\\text{Number of individuals in each cluster}\\)",
+                        "\\(\\text{Probability of one or more Type I error(s)}\\)",
+                        "\\(\\text{Estimated intervention effect on the first outcome }(Y_1)\\)",
+                        "\\(\\text{Estimated intervention effect on the second outcome }(Y_2)\\)",
+                        "\\(\\text{Total variance of the first outcome, } Y_1\\)",
+                        "\\(\\text{Total variance of the second outcome, } Y_2\\)",
+                        "\\(\\text{Correlation for } Y_1 \\text{ for two different individuals in the same cluster}\\)",
+                        "\\(\\text{Correlation for } Y_2 \\text{ for two different individuals in the same cluster}\\)",
+                        "\\(\\text{Correlation between } Y_1 \\text{ and } Y_2 \\text{ for two different individuals in the same cluster}\\)",
+                        "\\(\\text{Correlation between } Y_1 \\text{ and } Y_2 \\text{ for the same individual}\\)",
+                        "\\(\\text{Treatment allocation ratio; } K_2 = rK_1\\)")
     )}, sanitize.text.function = function(x) x)
 
 
