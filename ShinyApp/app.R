@@ -1,12 +1,15 @@
 library(shiny)
 library(ggplot2)
 library(latex2exp)
+library(bslib)
+library(shinydashboard)
+library(crt2power)
 
 # Load your package
 # library(yourpackage)  # Uncomment and replace 'yourpackage' with the actual package name
 
 # Define UI for application
-ui <- fluidPage(
+ui <- page_navbar(
   tags$head(
     tags$link(rel="stylesheet",
               href="https://cdn.jsdelivr.net/npm/katex@0.10.1/dist/katex.min.css",
@@ -24,136 +27,164 @@ ui <- fluidPage(
     </script>')
   ),
 
-  titlePanel("Calculate study design specifications for cluster-randomized trials \nwith co-primary outcomes using `crt2power` package"),
+  title = "`crt2power` Application",
+  bg = "#2D89C8",
+  inverse = TRUE,
 
-  p("This ShinyApp lets the user calculate the number of clusters in the treatment group ($K$), cluster size ($m$), or statistical power ($\\pi$) from the user's desired input parameters. Calculations are done using the R package `crt2power`."),
+  # UI 1 (power) -------------
+  nav_panel(title = "Calculate Power",
+            titlePanel("Calculate study design specifications for cluster-randomized trials \nwith co-primary outcomes using `crt2power` package"),
+            p("This ShinyApp lets the user calculate the number of clusters in the treatment group ($K$), cluster size ($m$), or statistical power ($\\pi$) from the user's desired input parameters. Calculations are done using the R package `crt2power`."),
 
-  shinyjs::useShinyjs(),
-  shinyjs::extendShinyjs(text = "shinyjs.refresh_page = function() { location.reload(); }", functions = "refresh_page"),
-  actionButton("refresh", "Refresh Application"),
+            shinyjs::useShinyjs(),
+            shinyjs::extendShinyjs(text = "shinyjs.refresh_page = function() { location.reload(); }", functions = "refresh_page"),
+            actionButton("refresh", "Refresh Application"),
+            p("Calculate Power: probability of correctly rejecting the null hypothesis", style = "color:blue; font-size:25px"),
+            p("Input Parameters", style = "font-size:20px"),
 
-  # UI 1 (K) -------------
-  p("Calculate Power: probability of correctly rejecting the null hypothesis", style = "color:blue; font-size:25px"),
-
-  p("Input Parameters", style = "font-size:20px"),
-
-  # Inputs at the top
-  fluidRow(
-    column(3,
-           textInput("K_power", "$K_1$: Number of clusters in treatment group", value = ""),
-           textInput("beta1_power", "$\\beta_1$: Effect for Y1", value = ""),
-           textInput("beta2_power", "$\\beta_2$: Effect for Y2", value = ""),
-           textInput("alpha_power", "$\\alpha$: Type I error", value = "")
-    ),
-    column(3,
-           textInput("m_power", "$m$: Number of subjects in each cluster", value = ""),
-           textInput("varY1_power", "Var$(Y_1)$: Total variance of outcome 1", value = ""),
-           textInput("varY2_power", "Var$(Y_2)$: Total variance of outcome 2", value = ""),
-           textInput("rho1_power", "$\\rho_1^{(1,2)}$: Inter-subject between-endpoint ICC", value = "")
-    ),
-    column(3,
-           textInput("r_power", "$r = K_2 / K_1$: Treatment allocation ratio", value = ""),
-           textInput("rho01_power", "$\\rho_0^{(1)}$: ICC for outcome 1", value = ""),
-           textInput("rho02_power", "$\\rho_0^{(2)}$: ICC for outcome 2", value = ""),
-           textInput("rho2_power", "$\\rho_2^{(1,2)}$: Intra-subject between-endpoint ICC", value = "")
-    )
-  ),
-
-  # Action button to trigger the calculation
-  fluidRow(
-    column(12,
-           actionButton("calcButton1", "Calculate")
-    )
-  ),
-
-  # Output: Bargraph
-  fluidRow(
-    column(12,
-           plotOutput("bargraph1")
-    )
-  ),
+            # Main row to contain both input columns and the bar graph
+            fluidRow(
+              # Input parameters and calculate button
+              column(4,
+                     # Inputs at the top
+                     fluidRow(
+                       column(6,
+                              textInput("K_power", "$K_1$: Clusters in treatment group", value = ""),
+                              textInput("r_power", "$r = K_2 / K_1$: Allocation ratio", value = ""),
+                              textInput("beta1_power", "$\\beta_1$: Effect for Y1", value = ""),
+                              textInput("varY1_power", "Var$(Y_1)$: Total variance of $Y_1$", value = ""),
+                              textInput("rho01_power", "$\\rho_0^{(1)}$: ICC for $Y_1$", value = ""),
+                              textInput("rho1_power", "$\\rho_1^{(1,2)}$: Inter-subject between-endpoint ICC", value = "")
+                       ),
+                       column(6,
+                              textInput("m_power", "$m$: Subjects in each cluster", value = ""),
+                              textInput("alpha_power", "$\\alpha$: Type I error", value = ""),
+                              textInput("beta2_power", "$\\beta_2$: Effect for Y2", value = ""),
+                              textInput("varY2_power", "Var$(Y_2)$: Total variance of $Y_2$", value = ""),
+                              textInput("rho02_power", "$\\rho_0^{(2)}$: ICC for $Y_2$", value = ""),
+                              textInput("rho2_power", "$\\rho_2^{(1,2)}$: Intra-subject between-endpoint ICC", value = "")
+                       )
+                     ),
+                     # Action button to trigger the calculation
+                     fluidRow(
+                       column(4,
+                              actionButton("calcButton1", "Calculate")
+                       )
+                     )
+              ),
+              # Bar graph to the right
+              column(8,
+                     plotOutput("bargraph1")
+              )
+            ),
+            fluid = TRUE),
 
   # UI 2 (K) -------------
-  p("Calculate $K$: number of clusters in treatment group", style = "color:blue; font-size:25px"),
+  nav_panel(title = "Calculate K",
+            titlePanel("Calculate study design specifications for cluster-randomized trials \nwith co-primary outcomes using `crt2power` package"),
+            p("This ShinyApp lets the user calculate the number of clusters in the treatment group ($K$), cluster size ($m$), or statistical power ($\\pi$) from the user's desired input parameters. Calculations are done using the R package `crt2power`."),
 
-  p("Input Parameters", style = "font-size:20px"),
+            shinyjs::useShinyjs(),
+            shinyjs::extendShinyjs(text = "shinyjs.refresh_page = function() { location.reload(); }", functions = "refresh_page"),
+            actionButton("refresh", "Refresh Application"),
 
-  # Inputs at the top
-  fluidRow(
-    column(3,
-           textInput("power_K", "$\\pi$: Statistical power", value = ""),
-           textInput("beta1_K", "$\\beta_1$: Effect for Y1", value = ""),
-           textInput("beta2_K", "$\\beta_2$: Effect for Y2", value = ""),
-           textInput("alpha_K", "$\\alpha$: Type I error", value = "")
-    ),
-    column(3,
-           textInput("m_K", "$m$: Number of subjects in each cluster", value = ""),
-           textInput("varY1_K", "Var$(Y_1)$: Total variance of outcome 1", value = ""),
-           textInput("varY2_K", "Var$(Y_2)$: Total variance of outcome 2", value = ""),
-           textInput("rho1_K", "$\\rho_1^{(1,2)}$: Inter-subject between-endpoint ICC", value = "")
-    ),
-    column(3,
-           textInput("r_K", "$r = K_2 / K_1$: Treatment allocation ratio", value = ""),
-           textInput("rho01_K", "$\\rho_0^{(1)}$: ICC for outcome 1", value = ""),
-           textInput("rho02_K", "$\\rho_0^{(2)}$: ICC for outcome 2", value = ""),
-           textInput("rho2_K", "$\\rho_2^{(1,2)}$: Intra-subject between-endpoint ICC", value = "")
-    )
-  ),
+            p("Calculate $K$: number of clusters in treatment group", style = "color:blue; font-size:25px"),
 
-  # Action button to trigger the calculation
-  fluidRow(
-    column(12,
-           actionButton("calcButton2", "Calculate")
-    )
-  ),
+            p("Input Parameters", style = "font-size:20px"),
 
-  # Output: Bargraph
-  fluidRow(
-    column(12,
-           plotOutput("bargraph2")
-    )
-  ),
+            # Main row to contain both input columns and the bar graph
+            fluidRow(
+              # Input parameters and calculate button
+              column(4,
+                     # Inputs at the top
+                     fluidRow(
+                       column(6,
+                              textInput("power_K", "$\\pi$: Statistical power", value = ""),
+                              textInput("r_K", "$r = K_2 / K_1$: Allocation ratio", value = ""),
+                              textInput("beta1_K", "$\\beta_1$: Effect for Y1", value = ""),
+                              textInput("varY1_K", "Var$(Y_1)$: Total variance of $Y_1$", value = ""),
+                              textInput("rho01_K", "$\\rho_0^{(1)}$: ICC for $Y_1$", value = ""),
+                              textInput("rho1_K", "$\\rho_1^{(1,2)}$: Inter-subject between-endpoint ICC", value = "")
+                       ),
+                       column(6,
+                              textInput("m_K", "$m$: Subjects in each cluster", value = ""),
+                              textInput("alpha_K", "$\\alpha$: Type I error", value = ""),
+                              textInput("beta2_K", "$\\beta_2$: Effect for Y2", value = ""),
+                              textInput("varY2_K", "Var$(Y_2)$: Total variance of $Y_2$", value = ""),
+                              textInput("rho02_K", "$\\rho_0^{(2)}$: ICC for $Y_2$", value = ""),
+                              textInput("rho2_K", "$\\rho_2^{(1,2)}$: Intra-subject between-endpoint ICC", value = "")
+                       )
+                     ),
+                     # Action button to trigger the calculation
+                     fluidRow(
+                       column(12,
+                              actionButton("calcButton2", "Calculate")
+                       )
+                     )
+              ),
+              # Bar graph to the right
+              column(8,
+                     plotOutput("bargraph2")
+              )
+            ),
+            fluid = TRUE),
 
   # UI 3 (m) -------------
-  p("Calculate $m$: number of individuals per cluster", style = "color:blue; font-size:25px"),
+  nav_panel(title = "Calculate m",
+            p("This ShinyApp lets the user calculate the number of clusters in the treatment group ($K$), cluster size ($m$), or statistical power ($\\pi$) from the user's desired input parameters. Calculations are done using the R package `crt2power`."),
 
-  p("Input Parameters", style = "font-size:20px"),
+            shinyjs::useShinyjs(),
+            shinyjs::extendShinyjs(text = "shinyjs.refresh_page = function() { location.reload(); }", functions = "refresh_page"),
+            actionButton("refresh", "Refresh Application"),
+            p("Calculate $m$: number of individuals per cluster", style = "color:blue; font-size:25px"),
+            p("Input Parameters", style = "font-size:20px"),
 
-  # Inputs at the top
-  fluidRow(
-    column(3,
-           textInput("power_m", "$\\pi$: Statistical power", value = ""),
-           textInput("beta1_m", "$\\beta_1$: Effect for Y1", value = ""),
-           textInput("beta2_m", "$\\beta_2$: Effect for Y2", value = ""),
-           textInput("alpha_m", "$\\alpha$: Type I error", value = "")
-    ),
-    column(3,
-           textInput("K_m", "$K_1$: Number of clusters in treatment group", value = ""),
-           textInput("varY1_m", "Var$(Y_1)$: Total variance of outcome 1", value = ""),
-           textInput("varY2_m", "Var$(Y_2)$: Total variance of outcome 2", value = ""),
-           textInput("rho1_m", "$\\rho_1^{(1,2)}$: Inter-subject between-endpoint ICC", value = "")
-    ),
-    column(3,
-           textInput("r_m", "$r = K_2 / K_1$: Treatment allocation ratio", value = ""),
-           textInput("rho01_m", "$\\rho_0^{(1)}$: ICC for outcome 1", value = ""),
-           textInput("rho02_m", "$\\rho_0^{(2)}$: ICC for outcome 2", value = ""),
-           textInput("rho2_m", "$\\rho_2^{(1,2)}$: Intra-subject between-endpoint ICC", value = "")
-    )
+            # Main row to contain both input columns and the bar graph
+            fluidRow(
+              # Input parameters and calculate button
+              column(4,
+                     # Inputs at the top
+                     fluidRow(
+                       column(6,
+                              textInput("power_m", "$\\pi$: Statistical power", value = ""),
+                              textInput("r_m", "$r = K_2 / K_1$: Allocation ratio", value = ""),
+                              textInput("beta1_m", "$\\beta_1$: Effect for Y1", value = ""),
+                              textInput("varY1_m", "Var$(Y_1)$: Total variance of $Y_1$", value = ""),
+                              textInput("rho01_m", "$\\rho_0^{(1)}$: ICC for $Y_1$", value = ""),
+                              textInput("rho1_m", "$\\rho_1^{(1,2)}$: Inter-subject between-endpoint ICC", value = "")
+                       ),
+                       column(6,
+                              textInput("K_m", "$K_1$: Clusters in treatment group", value = ""),
+                              textInput("alpha_m", "$\\alpha$: Type I error", value = ""),
+                              textInput("beta2_m", "$\\beta_2$: Effect for Y2", value = ""),
+                              textInput("varY2_m", "Var$(Y_2)$: Total variance of $Y_2$", value = ""),
+                              textInput("rho02_m", "$\\rho_0^{(2)}$: ICC for $Y_2$", value = ""),
+                              textInput("rho2_m", "$\\rho_2^{(1,2)}$: Intra-subject between-endpoint ICC", value = "")
+                       )
+                     ),
+                     # Action button to trigger the calculation
+                     fluidRow(
+                       column(12,
+                              actionButton("calcButton3", "Calculate")
+                       )
+                     )
+              ),
+              # Bar graph to the right
+              column(8,
+                     plotOutput("bargraph3")
+              )
+            ),
+            fluid = TRUE),
+
+  nav_spacer(),
+  nav_menu(
+    title = "Links",
+    align = "right",
+    nav_item(tags$a("Posit", href = "https://posit.co")),
+    nav_item(tags$a("Shiny", href = "https://shiny.posit.co"))
   ),
 
-  # Action button to trigger the calculation
-  fluidRow(
-    column(12,
-           actionButton("calcButton3", "Calculate")
-    )
-  ),
 
-  # Output: Bargraph
-  fluidRow(
-    column(12,
-           plotOutput("bargraph3")
-    )
-  )
 )
 
 # Define server logic
