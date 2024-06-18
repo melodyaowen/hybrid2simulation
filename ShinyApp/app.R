@@ -31,15 +31,20 @@ ui <- page_navbar(
   bg = "#2D89C8",
   inverse = TRUE,
 
+  # Overview -------------
+  nav_panel(title = "Overview",
+            titlePanel("Calculate study design specifications for cluster-randomized trials \nwith co-primary outcomes using `crt2power` package"),
+            p("This ShinyApp lets the user calculate the number of clusters in the treatment group ($K$), cluster size ($m$), or statistical power ($\\pi$) from the user's desired input parameters. Calculations are done using the R package `crt2power`."),
+            fluid = TRUE),
+
   # UI 1 (power) -------------
   nav_panel(title = "Calculate Power",
-            titlePanel("Calculate study design specifications for cluster-randomized trials \nwith co-primary outcomes using `crt2power` package"),
+            titlePanel("Calculate Power: probability of correctly rejecting the null hypothesis"),
             p("This ShinyApp lets the user calculate the number of clusters in the treatment group ($K$), cluster size ($m$), or statistical power ($\\pi$) from the user's desired input parameters. Calculations are done using the R package `crt2power`."),
 
             shinyjs::useShinyjs(),
             shinyjs::extendShinyjs(text = "shinyjs.refresh_page = function() { location.reload(); }", functions = "refresh_page"),
             actionButton("refresh", "Refresh Application"),
-            p("Calculate Power: probability of correctly rejecting the null hypothesis", style = "color:blue; font-size:25px"),
             p("Input Parameters", style = "font-size:20px"),
 
             # Main row to contain both input columns and the bar graph
@@ -81,15 +86,11 @@ ui <- page_navbar(
 
   # UI 2 (K) -------------
   nav_panel(title = "Calculate K",
-            titlePanel("Calculate study design specifications for cluster-randomized trials \nwith co-primary outcomes using `crt2power` package"),
+            titlePanel("Calculate $K$: number of clusters in treatment group"),
             p("This ShinyApp lets the user calculate the number of clusters in the treatment group ($K$), cluster size ($m$), or statistical power ($\\pi$) from the user's desired input parameters. Calculations are done using the R package `crt2power`."),
-
             shinyjs::useShinyjs(),
             shinyjs::extendShinyjs(text = "shinyjs.refresh_page = function() { location.reload(); }", functions = "refresh_page"),
             actionButton("refresh", "Refresh Application"),
-
-            p("Calculate $K$: number of clusters in treatment group", style = "color:blue; font-size:25px"),
-
             p("Input Parameters", style = "font-size:20px"),
 
             # Main row to contain both input columns and the bar graph
@@ -131,12 +132,12 @@ ui <- page_navbar(
 
   # UI 3 (m) -------------
   nav_panel(title = "Calculate m",
+            titlePanel("Calculate $m$: number of individuals per cluster"),
             p("This ShinyApp lets the user calculate the number of clusters in the treatment group ($K$), cluster size ($m$), or statistical power ($\\pi$) from the user's desired input parameters. Calculations are done using the R package `crt2power`."),
 
             shinyjs::useShinyjs(),
             shinyjs::extendShinyjs(text = "shinyjs.refresh_page = function() { location.reload(); }", functions = "refresh_page"),
             actionButton("refresh", "Refresh Application"),
-            p("Calculate $m$: number of individuals per cluster", style = "color:blue; font-size:25px"),
             p("Input Parameters", style = "font-size:20px"),
 
             # Main row to contain both input columns and the bar graph
