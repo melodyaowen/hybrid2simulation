@@ -1,0 +1,4 @@
+table.data.frame th, table.data.frame td {
+  text-align: left;
+  padding: 5px;
+}

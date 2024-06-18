@@ -4,6 +4,8 @@ library(latex2exp)
 library(bslib)
 library(shinydashboard)
 library(crt2power)
+library(tibble)
+library(DT)
 
 # Load your package
 # library(yourpackage)  # Uncomment and replace 'yourpackage' with the actual package name
@@ -24,17 +26,37 @@ ui <- page_navbar(
           delimiters: [{left: "$", right: "$", display: false}]
         });
       })
-    </script>')
+    </script>'),
+    tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
   ),
 
   title = "`crt2power` Application",
-  bg = "#2D89C8",
+  bg = "#FF69B4",
   inverse = TRUE,
+
+  # tags$head(
+  #   tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+  # ),
 
   # Overview -------------
   nav_panel(title = "Overview",
-            titlePanel("Calculate study design specifications for cluster-randomized trials \nwith co-primary outcomes using `crt2power` package"),
-            p("This ShinyApp lets the user calculate the number of clusters in the treatment group ($K$), cluster size ($m$), or statistical power ($\\pi$) from the user's desired input parameters. Calculations are done using the R package `crt2power`."),
+            titlePanel(
+              h1("Power and sample size calculator for cluster-randomized trials with two co-primary outcomes", align = "center")
+            ),
+
+            fluidRow(
+              column(4, card(
+                card_header("Overview"),
+                "This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package `crt2power`."
+              )),
+
+              column(8, card(
+                card_header("Guide to Input Parameters"),
+                withMathJax(), tableOutput('overviewTable')
+              ))
+
+            ),
+
             fluid = TRUE),
 
   # UI 1 (power) -------------
@@ -821,6 +843,67 @@ server <- function(input, output) {
         ggtitle("Figure 3. Results for number of individuals per cluster (m)")
     }
   })
+
+
+
+  output$overviewTable <- renderTable({
+    myTable <- data.frame(
+      `Parameter` = c("$$\\text{Statistical power}$$",
+                      "$$\\text{Number of clusters}$$",
+                      "$$\\text{Cluster size}$$",
+                      "$$\\text{Family-wise false positive rate}$$",
+                      "$$\\text{Effect for }Y_1$$",
+                      "$$\\text{Effect for }Y_2$$",
+                      "$$\\text{Total variance of }Y_1$$",
+                      "$$\\text{Total variance of }Y_2$$",
+                      "$$\\text{Endpoint-specific ICC for }Y_1$$",
+                      "$$\\text{Endpoint-specific ICC for }Y_2$$",
+                      "$$\\text{Inter-subject between-endpoint ICC}$$",
+                      "$$\\text{Intra-subject between-endpoint ICC}$$",
+                      "$$\\text{Treatment allocation ratio}$$"),
+      `Statistical Notation` = c("$$\\pi$$",
+                                 "$$K$$",
+                                 "$$m$$",
+                                 "$$\\alpha$$",
+                                 "$$\\beta_1^*$$",
+                                 "$$\\beta_2^*$$",
+                                 "$$\\sigma_1^2$$",
+                                 "$$\\sigma_2^2$$",
+                                 "$$\\rho_0^{(1)}$$",
+                                 "$$\\rho_0^{(2)}$$",
+                                 "$$\\rho_1^{(1,2)}$$",
+                                 "$$\\rho_2^{(1,2)}$$",
+                                 "$$r$$"),
+      `Variable Name in Package` = c("$$\\text{power}$$",
+                                     "$$\\text{K}$$",
+                                     "$$\\text{m}$$",
+                                     "$$\\text{alpha}$$",
+                                     "$$\\text{beta1}$$",
+                                     "$$\\text{beta2}$$",
+                                     "$$\\text{varY1}$$",
+                                     "$$\\text{varY2}$$",
+                                     "$$\\text{rho01}$$",
+                                     "$$\\text{rho02}$$",
+                                     "$$\\text{rho1}$$",
+                                     "$$\\text{rho2}$$",
+                                     "$$\\text{r}$$"),
+      `Description` = c("$$\\text{Probability of detecting a true effect under } H_A$$",
+                        "$$\\text{Number of clusters in each treatment arm}$$",
+                        "$$\\text{Number of individuals in each cluster}$$",
+                        "$$\\text{Probability of one or more Type I error(s)}$$",
+                        "$$\\text{Estimated intervention effect on the first outcome }(Y_1)$$",
+                        "$$\\text{Estimated intervention effect on the second outcome }(Y_2)$$",
+                        "$$\\text{Total variance of the first outcome, } Y_1$$",
+                        "$$\\text{Total variance of the second outcome, } Y_2$$",
+                        "$$\\text{Correlation for } Y_1 \\text{ for two different individuals in the same cluster}$$",
+                        "$$\\text{Correlation for } Y_2 \\text{ for two different individuals in the same cluster}$$",
+                        "$$\\text{Correlation between } Y_1 \\text{ and } Y_2 \\text{ for two different individuals in the same cluster}$$",
+                        "$$\\text{Correlation between } Y_1 \\text{ and } Y_2 \\text{ for the same individual}$$",
+                        "$$\\text{Treatment allocation ratio; } K_2 = rK_1 \\text{ where } K_1 \\text{ is number of clusters in experimental group}$$")
+    )}, sanitize.text.function = function(x) x)
+
+
+
 }
 
 # Run the application
