@@ -6,6 +6,7 @@ library(shinydashboard)
 library(crt2power)
 library(tibble)
 library(DT)
+require(tidyverse)
 
 # Load your package
 # library(yourpackage)  # Uncomment and replace 'yourpackage' with the actual package name
@@ -19,10 +20,8 @@ ui <- page_navbar(
               crossorigin="anonymous"),
     HTML('<script defer src="https://cdn.jsdelivr.net/npm/katex@0.10.1/dist/katex.min.js" integrity="sha384-2BKqo+exmr9su6dir+qCw08N2ZKRucY4PrGQPPWU1A7FtlCGjmEGFqXCv5nyM5Ij" crossorigin="anonymous"></script>'),
     HTML('<script defer src="https://cdn.jsdelivr.net/npm/katex@0.10.1/dist/contrib/auto-render.min.js" integrity="sha384-kWPLUVMOks5AQFrykwIup5lo0m3iMkkHrD0uJ4H5cjeGihAutqP0yW0J6dpFiVkI" crossorigin="anonymous"></script>'),
-    HTML('
-    <script>
-      document.addEventListener("DOMContentLoaded", function(){
-        renderMathInElement(document.body, {
+    HTML('<script> document.addEventListener("DOMContentLoaded", function(){
+          renderMathInElement(document.body, {
           delimiters: [{left: "$", right: "$", display: false}]
         });
       })
@@ -30,14 +29,15 @@ ui <- page_navbar(
     #tags$link(rel = "stylesheet", type = "text/css", href = "styles.css"),
     tags$style(HTML("
       .my_table .table > thead > tr > th {
-        background-color: #FF69B4;
+        background-color: #6495ED;
         color: white;
         padding: 8px; /* Adjust padding as needed */
         text-align: left;
         vertical-align: middle;
-        border-top: 2px solid #FF69B4;
-        border-left: 2px solid #FF69B4; /* Left border for header */;
-        border-right: 2px solid #FF69B4; /* Right border for header */
+        border-top: 2px solid #6495ED;
+        border-left: 2px solid #6495ED; /* Left border for header */;
+        border-right: 2px solid #6495ED; /* Right border for header */
+        border-bottom: 2px solid #6495ED; /* Right border for header */
       }
 
       .my_table .table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
@@ -45,10 +45,34 @@ ui <- page_navbar(
         text-align: left;
         line-height: 1.42857143;
         vertical-align: middle;
-        border-top: 2px solid #FF69B4;
-        border-left: 2px solid #FF69B4;
-        border-right: 2px solid #FF69B4;
-        border-bottom: 2px solid #FF69B4;
+        border-top: 2px solid #6495ED;
+        border-left: 2px solid #6495ED;
+        border-right: 2px solid #6495ED;
+        border-bottom: 2px solid #6495ED;
+      }
+    ")),
+
+    tags$style(HTML("
+    .result_table {
+        display: flex; /* Use flexbox to center the table */
+        justify-content: center; /* Center horizontally */
+        margin-top: 20px; /* Add some top margin for spacing */
+      }
+
+      .result_table .table > thead > tr > th {
+        background-color: #6495ED;
+        color: white;
+        border-top: 2px solid #6495ED;
+        border-left: 2px solid #6495ED; /* Left border for header */;
+        border-right: 2px solid #6495ED; /* Right border for header */
+        border-bottom: 2px solid #6495ED; /* Right border for header */
+      }
+
+      .result_table .table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
+        border-top: 2px solid #6495ED;
+        border-left: 2px solid #6495ED;
+        border-right: 2px solid #6495ED;
+        border-bottom: 2px solid #6495ED;
       }
     "))
   ),
@@ -57,81 +81,90 @@ ui <- page_navbar(
   bg = "#FF69B4",
   inverse = TRUE,
 
-  # tags$head(
-  #   tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
-  # ),
-
   # Overview -------------
   nav_panel(title = "Overview",
-            titlePanel(
-              h1("Power and sample size calculator for cluster-randomized trials with two co-primary outcomes", align = "center")
-            ),
-
+            titlePanel(h1("Power and sample size calculator for cluster-randomized trials with two co-primary outcomes", align = "center")),
             fluidRow(
-              column(4, card(
-                card_header("Overview"),
-                "This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package `crt2power`."
-              ),
-              card(card_header("Contact"), "Text")),
-
-              column(8, card(
-                card_header("Guide to Input Parameters"),
-                withMathJax(),
-                tags$div(
-                  class="my_table",
-                  tableOutput('overviewTable')
-                ),
-                p("1. This assumes equal treatment allocation. To be more precise, we often refer to the number of clusters in the treatment group as $K_1$, and the number of clusters in the control group as $K_2$.")
-
-              ))
-
-            ),
-
-            fluid = TRUE),
-
-  # UI 1 (power) -------------
-  nav_panel(title = "Calculate Power",
-            titlePanel("Calculate Power: probability of correctly rejecting the null hypothesis"),
-            p("This ShinyApp lets the user calculate the number of clusters in the treatment group ($K$), cluster size ($m$), or statistical power ($\\pi$) from the user's desired input parameters. Calculations are done using the R package `crt2power`."),
-
-            shinyjs::useShinyjs(),
-            shinyjs::extendShinyjs(text = "shinyjs.refresh_page = function() { location.reload(); }", functions = "refresh_page"),
-            actionButton("refresh", "Refresh Application"),
-            p("Input Parameters", style = "font-size:20px"),
-
-            # Main row to contain both input columns and the bar graph
-            fluidRow(
-              # Input parameters and calculate button
               column(4,
-                     # Inputs at the top
-                     fluidRow(
-                       column(6,
-                              textInput("K_power", "$K_1$: Clusters in treatment group", value = ""),
-                              textInput("r_power", "$r = K_2 / K_1$: Allocation ratio", value = ""),
-                              textInput("beta1_power", "$\\beta_1$: Effect for Y1", value = ""),
-                              textInput("varY1_power", "Var$(Y_1)$: Total variance of $Y_1$", value = ""),
-                              textInput("rho01_power", "$\\rho_0^{(1)}$: ICC for $Y_1$", value = ""),
-                              textInput("rho1_power", "$\\rho_1^{(1,2)}$: Inter-subject between-endpoint ICC", value = "")
+                     card(
+                       card_header("Overview"),
+                       "This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package `crt2power`."
                        ),
-                       column(6,
-                              textInput("m_power", "$m$: Subjects in each cluster", value = ""),
-                              textInput("alpha_power", "$\\alpha$: Type I error", value = ""),
-                              textInput("beta2_power", "$\\beta_2$: Effect for Y2", value = ""),
-                              textInput("varY2_power", "Var$(Y_2)$: Total variance of $Y_2$", value = ""),
-                              textInput("rho02_power", "$\\rho_0^{(2)}$: ICC for $Y_2$", value = ""),
-                              textInput("rho2_power", "$\\rho_2^{(1,2)}$: Intra-subject between-endpoint ICC", value = "")
+                     card(
+                       card_header("Contact"), "Text"
                        )
                      ),
-                     # Action button to trigger the calculation
-                     fluidRow(
-                       column(4,
-                              actionButton("calcButton1", "Calculate")
+              column(8,
+                     card(
+                       card_header("Guide to Input Parameters"),
+                       withMathJax(),
+                       tags$div(class = "my_table", tableOutput('overviewTable')),
+                       p("1. This assumes equal treatment allocation. To be more precise, we often refer to the number of clusters in the treatment group as $K_1$, and the number of clusters in the control group as $K_2$.")
                        )
                      )
               ),
+            fluid = TRUE), # End nav_panel()
+
+  # UI 1 (power) -------------
+  nav_panel(title = "Calculate Power",
+            titlePanel("Calculate Power ($\\pi$): probability of correctly rejecting the null hypothesis"),
+            p("This ShinyApp lets the user calculate the number of clusters in the treatment group ($K$), cluster size ($m$), or statistical power ($\\pi$) from the user's desired input parameters. Calculations are done using the R package `crt2power`."),
+
+            fluidRow( # Main row to contain both input columns and the bar graph
+
+              column(4, # Input parameters and calculate button
+                     card(
+                       card_header("Input Parameters"),
+                       fluidRow( # Inputs at the top
+                         column(6,
+                                textInput("K_power", "$K_1$: Clusters in treatment group", value = ""),
+                                textInput("r_power", "$r = K_2 / K_1$: Allocation ratio", value = ""),
+                                textInput("beta1_power", "$\\beta_1$: Effect for Y1", value = ""),
+                                textInput("varY1_power", "Var$(Y_1)$: Total variance of $Y_1$", value = ""),
+                                textInput("rho01_power", "$\\rho_0^{(1)}$: ICC for $Y_1$", value = ""),
+                                textInput("rho1_power", "$\\rho_1^{(1,2)}$: Inter-subject between-endpoint ICC", value = "")
+                                ),
+                         column(6,
+                                textInput("m_power", "$m$: Subjects in each cluster", value = ""),
+                                textInput("alpha_power", "$\\alpha$: Type I error", value = ""),
+                                textInput("beta2_power", "$\\beta_2$: Effect for Y2", value = ""),
+                                textInput("varY2_power", "Var$(Y_2)$: Total variance of $Y_2$", value = ""),
+                                textInput("rho02_power", "$\\rho_0^{(2)}$: ICC for $Y_2$", value = ""),
+                                textInput("rho2_power", "$\\rho_2^{(1,2)}$: Intra-subject between-endpoint ICC", value = "")
+                                )
+                         ),
+                       # Action button to trigger the calculation
+                       fluidRow(
+                         column(3, actionButton("calcButton1", "Calculate")),
+                         column(5,
+                                shinyjs::useShinyjs(),
+                                shinyjs::extendShinyjs(text = "shinyjs.refresh_page = function() { location.reload(); }", functions = "refresh_page"),
+                                actionButton("refresh", "Refresh Application")
+                                )
+                         ),
+                       fluidRow = TRUE
+                       )
+                     ),
+
               # Bar graph to the right
               column(8,
-                     plotOutput("bargraph1")
+
+                     navset_card_underline(
+                       title = "Visualizations",
+                       # Panel with plot ----
+                       nav_panel("Plot", plotOutput("bargraph1")),
+
+                       # Panel with table ----
+                       #nav_panel("Table", tableOutput("table1"))
+
+                       nav_panel("Table", tags$div(
+                         class="result_table",
+                         tableOutput('table1'))
+
+                       )
+
+                     )
+
               )
             ),
             fluid = TRUE),
@@ -140,15 +173,12 @@ ui <- page_navbar(
   nav_panel(title = "Calculate K",
             titlePanel("Calculate $K$: number of clusters in treatment group"),
             p("This ShinyApp lets the user calculate the number of clusters in the treatment group ($K$), cluster size ($m$), or statistical power ($\\pi$) from the user's desired input parameters. Calculations are done using the R package `crt2power`."),
-            shinyjs::useShinyjs(),
-            shinyjs::extendShinyjs(text = "shinyjs.refresh_page = function() { location.reload(); }", functions = "refresh_page"),
-            actionButton("refresh", "Refresh Application"),
-            p("Input Parameters", style = "font-size:20px"),
 
             # Main row to contain both input columns and the bar graph
             fluidRow(
               # Input parameters and calculate button
               column(4,
+                     card(card_header("Input Parameters"),
                      # Inputs at the top
                      fluidRow(
                        column(6,
@@ -170,14 +200,34 @@ ui <- page_navbar(
                      ),
                      # Action button to trigger the calculation
                      fluidRow(
-                       column(12,
+                       column(3,
                               actionButton("calcButton2", "Calculate")
+                       ),
+                       column(5,
+                              shinyjs::useShinyjs(),
+                              shinyjs::extendShinyjs(text = "shinyjs.refresh_page = function() { location.reload(); }", functions = "refresh_page"),
+                              actionButton("refresh", "Refresh Application")
                        )
+                     ),
+                     fluidRow = TRUE
                      )
               ),
               # Bar graph to the right
               column(8,
-                     plotOutput("bargraph2")
+                     navset_card_underline(
+                       title = "Visualizations",
+                       # Panel with plot ----
+                       nav_panel("Plot", plotOutput("bargraph2")),
+
+                       # Panel with table ----
+                       #nav_panel("Table", tableOutput("table2"))
+
+                       nav_panel("Table", tags$div(
+                         class="result_table",
+                         tableOutput('table2'))
+
+                       )
+                     )
               )
             ),
             fluid = TRUE),
@@ -187,15 +237,11 @@ ui <- page_navbar(
             titlePanel("Calculate $m$: number of individuals per cluster"),
             p("This ShinyApp lets the user calculate the number of clusters in the treatment group ($K$), cluster size ($m$), or statistical power ($\\pi$) from the user's desired input parameters. Calculations are done using the R package `crt2power`."),
 
-            shinyjs::useShinyjs(),
-            shinyjs::extendShinyjs(text = "shinyjs.refresh_page = function() { location.reload(); }", functions = "refresh_page"),
-            actionButton("refresh", "Refresh Application"),
-            p("Input Parameters", style = "font-size:20px"),
-
             # Main row to contain both input columns and the bar graph
             fluidRow(
               # Input parameters and calculate button
               column(4,
+                     card(card_header("Input Parameters"),
                      # Inputs at the top
                      fluidRow(
                        column(6,
@@ -217,17 +263,41 @@ ui <- page_navbar(
                      ),
                      # Action button to trigger the calculation
                      fluidRow(
-                       column(12,
+                       column(3,
                               actionButton("calcButton3", "Calculate")
+                       ),
+                       column(5,
+                              shinyjs::useShinyjs(),
+                              shinyjs::extendShinyjs(text = "shinyjs.refresh_page = function() { location.reload(); }", functions = "refresh_page"),
+                              actionButton("refresh", "Refresh Application")
                        )
+                     ),
+                     fluidRow = TRUE
                      )
               ),
               # Bar graph to the right
               column(8,
-                     plotOutput("bargraph3")
+                     navset_card_underline(
+                       title = "Visualizations",
+                       # Panel with plot ----
+                       nav_panel("Plot", plotOutput("bargraph3")),
+
+                       nav_panel("Table", tags$div(
+                         class = "result_table",
+                         tableOutput('table3'))
+
+                       ),
+                       actionButton("sort_button", "Sort by Individuals Per Cluster (m)")
+                     )
               )
             ),
-            fluid = TRUE),
+
+            # shinyjs::useShinyjs(),
+            # shinyjs::extendShinyjs(text = "shinyjs.refresh_page = function() { location.reload(); }", functions = "refresh_page"),
+            # actionButton("refresh", "Refresh Application"),
+
+            fluid = TRUE
+            ), # End nav_panel()
 
   nav_spacer(),
   nav_menu(
@@ -245,6 +315,12 @@ server <- function(input, output) {
 
   observeEvent(input$refresh, {
     shinyjs::js$refresh_page()
+  })
+
+  sorted <- reactiveVal(FALSE)
+
+  observeEvent(input$sort_button, {
+    sorted(!sorted())
   })
 
 # Server 1 (Power) ---------------
@@ -352,10 +428,18 @@ server <- function(input, output) {
                      "P-Value Adj. (D/AP)", "Combined Outcomes",
                      "Single Weighted", "Disjunctive F-dist",
                      "Disjunctive Chi2", "Conjunctive T", "Conjunctive MVN"),
+        TableLabel = c("P-Value Adjustment (Bonferroni)", "P-Value Adjustment (Sidak)",
+                       "P-Value Adjustment (D/AP)", "Combined/Composite Outcomes Approach",
+                       "Single 1-DF Weighted Test", "Disjunctive 2-DF Test (F Distribution)",
+                       "Disjunctive 2-DF Test (Chi-2 Distribution)",
+                       "Conjunctive IU Test (T Distribution)", "Conjunctive IU Test (Multivariate Normal Distribution)"),
+        MethodIndex = c("Method 1", "Method 1", "Method 1",
+                        "Method 2", "Method 3", "Method 4", "Method 4",
+                        "Method 5", "Method 5"),
         Value = c(power1_bonf, power1_sidak, power1_dap,
                   power2, power3, power4_F, power4_Chi2,
                   power5_T, power5_MVN),
-        Fill = c(1, 1, 1, 2, 3, 4, 4, 5, 5)
+        Fill = c(1, 2, 3, 4, 5, 6, 7, 8, 9)
       )
     } else {
       data.frame(
@@ -365,7 +449,7 @@ server <- function(input, output) {
     }
   })
 
-  # Output 1 (m) -------------
+  # Output 1 (power) -------------
   output$bargraph1 <- renderPlot({
     # Get the results
     df <- results1()
@@ -378,9 +462,19 @@ server <- function(input, output) {
         ylab("Power") +
         xlab("Design Method") +
         geom_text(aes(label = Value), vjust = -0.5, size = 4) +
-        ggtitle("Figure 1. Results for statistical power")
+        ggtitle("Statistical Power")
     }
   })
+
+  output$table1 <- renderTable({
+    myTable1 <- results1() %>%
+      dplyr::mutate(`Statistical Power` = paste0(round(Value*100, 2), "%")) %>%
+      dplyr::select(`Method Group` = MethodIndex,
+                    `Design Method` = TableLabel,
+                    `Statistical Power`)
+
+
+  }, sanitize.text.function = function(x) x)
 
 # Server 2 (K) ---------------
   # Reactive expression to run the functions and create the data frame
@@ -399,18 +493,18 @@ server <- function(input, output) {
     rho1_input <- as.numeric(input$rho1_K)
     rho2_input <- as.numeric(input$rho2_K)
 
-    # r_input <- 0.5
-    # power_input <- 0.8
-    # m_input <- 300
-    # alpha_input <- 0.05
-    # beta1_input <- 0.1
-    # beta2_input <- 0.1
-    # varY1_input <- 0.23
-    # varY2_input <- 0.25
-    # rho01_input <- 0.025
-    # rho02_input <- 0.025
-    # rho1_input <- 0.01
-    # rho2_input <- 0.05
+    r_input <- 0.5
+    power_input <- 0.8
+    m_input <- 300
+    alpha_input <- 0.05
+    beta1_input <- 0.1
+    beta2_input <- 0.1
+    varY1_input <- 0.23
+    varY2_input <- 0.25
+    rho01_input <- 0.025
+    rho02_input <- 0.025
+    rho1_input <- 0.01
+    rho2_input <- 0.05
 
     # Ensure inputs are not empty
     if (!is.na(r_input) && !is.na(power_input) && !is.na(m_input) && !is.na(alpha_input) && !is.na(beta1_input) && !is.na(beta2_input) && !is.na(varY1_input) && !is.na(varY2_input) && !is.na(rho01_input) && !is.na(rho02_input) && !is.na(rho1_input) && !is.na(rho2_input)) {
@@ -710,8 +804,26 @@ server <- function(input, output) {
                   "Treatment", "Treatment", "Treatment",
                   "Control", "Control", "Control", "Control", "Control",
                   "Control", "Control", "Control", "Control"),
-        Order = c(1, 1, 1, 2, 3, 4, 4, 5, 5,
-                  1, 1, 1, 2, 3, 4, 4, 5, 5)
+        TableLabel = c("P-Value Adjustment (Bonferroni)", "P-Value Adjustment (Sidak)",
+                       "P-Value Adjustment (D/AP)", "Combined/Composite Outcomes Approach",
+                       "Single 1-DF Weighted Test", "Disjunctive 2-DF Test (F Distribution)",
+                       "Disjunctive 2-DF Test (Chi-2 Distribution)",
+                       "Conjunctive IU Test (T Distribution)",
+                       "Conjunctive IU Test (Multivariate Normal Distribution)",
+                       "P-Value Adjustment (Bonferroni)", "P-Value Adjustment (Sidak)",
+                       "P-Value Adjustment (D/AP)", "Combined/Composite Outcomes Approach",
+                       "Single 1-DF Weighted Test", "Disjunctive 2-DF Test (F Distribution)",
+                       "Disjunctive 2-DF Test (Chi-2 Distribution)",
+                       "Conjunctive IU Test (T Distribution)",
+                       "Conjunctive IU Test (Multivariate Normal Distribution)"),
+        MethodIndex = c("Method 1", "Method 1", "Method 1",
+                        "Method 2", "Method 3", "Method 4", "Method 4",
+                        "Method 5", "Method 5",
+                        "Method 1", "Method 1", "Method 1",
+                        "Method 2", "Method 3", "Method 4", "Method 4",
+                        "Method 5", "Method 5"),
+        Order = c(1, 2, 3, 4, 5, 6, 7, 8, 9,
+                  1, 2, 3, 4, 5, 6, 7, 8, 9)
       )
     } else {
       data.frame(
@@ -737,9 +849,21 @@ server <- function(input, output) {
               geom_text(aes(label = Value),
                         position = position_dodge(width = 0.9),
                         vjust = -0.5, size = 4) +
-              ggtitle("Figure 2. Results for number of clusters in treatment group (K1) and control group (K2)"))
+              ggtitle("Number of Clusters in Treatment Group (K1) and Control Group (K2)"))
     }
   })
+
+  output$table2 <- renderTable({
+    myTable3 <- results2() %>%
+      dplyr::rowwise() %>%
+      dplyr::mutate(Value = as.integer(Value)) %>%
+      dplyr::arrange(Order) %>%
+      tidyr::pivot_wider(names_from = Group, values_from = Value) %>%
+      dplyr::select(`Method Group` = MethodIndex,
+                    `Design Method` = TableLabel,
+                    `Tretment (K1)` = Treatment,
+                    `Control (K2)` = Control)
+  }, sanitize.text.function = function(x) x)
 
 # Server 3 (m) ---------------
   # Reactive expression to run the functions and create the data frame
@@ -758,18 +882,18 @@ server <- function(input, output) {
     rho1_input <- as.numeric(input$rho1_m)
     rho2_input <- as.numeric(input$rho2_m)
 
-    # r_input <- 0.5
-    # power_input <- 0.8
-    # K_input <- 30
-    # alpha_input <- 0.05
-    # beta1_input <- 0.1
-    # beta2_input <- 0.1
-    # varY1_input <- 0.23
-    # varY2_input <- 0.25
-    # rho01_input <- 0.025
-    # rho02_input <- 0.025
-    # rho1_input <- 0.01
-    # rho2_input <- 0.05
+    r_input <- 0.5
+    power_input <- 0.8
+    K_input <- 30
+    alpha_input <- 0.05
+    beta1_input <- 0.1
+    beta2_input <- 0.1
+    varY1_input <- 0.23
+    varY2_input <- 0.25
+    rho01_input <- 0.025
+    rho02_input <- 0.025
+    rho1_input <- 0.01
+    rho2_input <- 0.05
 
     # Ensure inputs are not empty
     if (!is.na(r_input) && !is.na(power_input) && !is.na(K_input) && !is.na(alpha_input) && !is.na(beta1_input) && !is.na(beta2_input) && !is.na(varY1_input) && !is.na(varY2_input) && !is.na(rho01_input) && !is.na(rho02_input) && !is.na(rho1_input) && !is.na(rho2_input)) {
@@ -846,8 +970,16 @@ server <- function(input, output) {
                      "P-Value Adj. (D/AP)", "Combined Outcomes",
                      "Single Weighted", "Disjunctive F-dist",
                      "Disjunctive Chi2", "Conjunctive T", "Conjunctive MVN"),
+        TableLabel = c("P-Value Adjustment (Bonferroni)", "P-Value Adjustment (Sidak)",
+                       "P-Value Adjustment (D/AP)", "Combined/Composite Outcomes Approach",
+                       "Single 1-DF Weighted Test", "Disjunctive 2-DF Test (F Distribution)",
+                       "Disjunctive 2-DF Test (Chi-2 Distribution)",
+                       "Conjunctive IU Test (T Distribution)", "Conjunctive IU Test (Multivariate Normal Distribution)"),
+        MethodIndex = c("Method 1", "Method 1", "Method 1",
+                        "Method 2", "Method 3", "Method 4", "Method 4",
+                        "Method 5", "Method 5"),
         Value = c(m1_bonf, m1_sidak, m1_dap, m2, m3, m4_F, m4_Chi2, m5_T, m5_MVN),
-        Fill = c(1, 1, 1, 2, 3, 4, 4, 5, 5)
+        Fill = c(1, 2, 3, 4, 5, 6, 7, 8, 9)
       )
     } else {
       data.frame(
@@ -870,11 +1002,24 @@ server <- function(input, output) {
         ylab("m") +
         xlab("Design Method") +
         geom_text(aes(label = Value), vjust = -0.5, size = 4) +
-        ggtitle("Figure 3. Results for number of individuals per cluster (m)")
+        ggtitle("Number of Individuals Per Cluster (m)")
     }
   })
 
+  output$table3 <- renderTable({
+    myTable3 <- results3() %>%
+      dplyr::mutate(Value = as.integer(Value)) %>%
+      dplyr::select(`Method Group` = MethodIndex,
+                    `Design Method` = TableLabel,
+                    `Individuals Per Cluster (m)` = Value)
 
+    if(sorted()){
+      myTable3 <- myTable3 %>%
+        dplyr::arrange(`Individuals Per Cluster (m)`)
+    }
+    myTable3
+
+    }, sanitize.text.function = function(x) x)
 
   output$overviewTable <- renderTable({
     myTable <- data.frame(
