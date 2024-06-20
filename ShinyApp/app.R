@@ -7,6 +7,9 @@ library(crt2power)
 library(tibble)
 library(DT)
 require(tidyverse)
+require(dplyr)
+require(kableExtra)
+require(MASS)
 
 # Load your package
 # library(yourpackage)  # Uncomment and replace 'yourpackage' with the actual package name
@@ -14,6 +17,9 @@ require(tidyverse)
 # Define UI for application
 ui <- page_navbar(
   tags$head(
+    tags$script(
+      src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"
+    ),
     tags$link(rel="stylesheet",
               href="https://cdn.jsdelivr.net/npm/katex@0.10.1/dist/katex.min.css",
               integrity="sha384-dbVIfZGuN1Yq7/1Ocstc1lUEm+AT+/rCkibIcC/OmWo5f0EA48Vf8CytHzGrSwbQ",
@@ -87,50 +93,150 @@ ui <- page_navbar(
             fluidRow(
               column(4,
                      card(
-                       card_header("Overview"),
-                       "This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package `crt2power`."
+                       card_header("Overview", style = "font-size: 18px;"),
+                       "This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package 'crt2power'."
                        ),
                      card(
-                       card_header("Optimizing Your Experience"),
-                       "For the best viewing experience when using this application on your web browser, we recommend setting the zoom to 80%. All calculations should take less than a minute. If you are waiting on a calculation, it may be because the input parameters you have provided result in very low power, or too high of sample size requirements. When this happens, please use the `Refresh Application` button to reload the application."
+                       card_header("Optimizing Your Experience", style = "font-size: 18px;"),
+                       "For the best viewing experience when using this application on a web browser, you may need to adjust the zoom percentage on your browser. All calculations should take less than a minute. If you are waiting on a calculation, it may be because the input parameters you have provided result in very low power, or too high of sample size requirements. When this happens, please use the 'Refresh Application' button to reload the application."
                      ),
                      card(
-                       card_header("Contact"),
+                       card_header("Contact", style = "font-size: 18px;"),
                        p("Please see the links tab at the upper right for more information.",
                          tags$br(),
-                         tags$b("Author: "), "Melody Owen",
                          tags$br(),
-                         tags$b("Email: "), "melody.owen@yale.edu",
+                         tags$b(style = "color: hotpink;", "Author: "),
+                         "Melody Owen",
                          tags$br(),
-                         tags$b("Affiliation: "), "Yale University, Department of Biostatistics, Center for Methods in Implementation and Prevention Science",
+                         tags$b(style = "color: hotpink;", "Email: "),
+                         "melody.owen@yale.edu",
                          tags$br(),
-                         tags$b("Acknowledgements: "), "Thank you to my advisors - Dr. Donna Spiegelman, Dr. Fan Li, and Dr. Laura Forastiere, and thank you to Yale for supporting this research"
+                         tags$b(style = "color: hotpink;", "Affiliation: "),
+                         "Yale University, Department of Biostatistics, Center for Methods in Implementation and Prevention Science",
+                         tags$br(),
+                         tags$b(style = "color: hotpink;", "Acknowledgements: "),
+                         "Thank you to my advisors - Dr. Donna Spiegelman, Dr. Fan Li, and Dr. Laura Forastiere, and thank you to Yale for supporting this research"
                        )
                        )
                      ),
+
+
               column(8,
                      card(
-                       card_header("Guide to Input Parameters"),
-                       withMathJax(),
-                       tags$div(class = "my_table", tableOutput('overviewTable')),
-                       p("1. This assumes equal treatment allocation. To be more precise, we often refer to the number of clusters in the treatment group as $K_1$, and the number of clusters in the control group as $K_2$.",
+                       card_header("Guide to Input Parameters", style = "font-size: 18px;"),
+                       tags$div(
+                         class = "my_table",
+                         HTML("
+            <table class='table table-striped'>
+              <thead>
+                <tr>
+                  <th>Parameter</th>
+                  <th>Statistical Notation</th>
+                  <th>Name in Package</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Statistical power</td>
+                  <td>$\\pi$</td>
+                  <td>power</td>
+                  <td>Probability of detecting a true effect under $H_A$</td>
+                </tr>
+                <tr>
+                  <td>Number of clusters</td>
+                  <td>$K$</td>
+                  <td>K</td>
+                  <td>Number of clusters in each treatment arm$^1$</td>
+                </tr>
+                <tr>
+                  <td>Cluster size</td>
+                  <td>$m$</td>
+                  <td>m</td>
+                  <td>Number of individuals in each cluster</td>
+                </tr>
+                <tr>
+                  <td>Family-wise false positive rate</td>
+                  <td>$\\alpha$</td>
+                  <td>alpha</td>
+                  <td>Probability of one or more Type I error(s)</td>
+                </tr>
+                <tr>
+                  <td>Effect for $Y_1$</td>
+                  <td>$\\beta_1^*$</td>
+                  <td>beta1</td>
+                  <td>Estimated intervention effect on the first outcome $(Y_1)$</td>
+                </tr>
+                <tr>
+                  <td>Effect for $Y_2$</td>
+                  <td>$\\beta_2^*$</td>
+                  <td>beta2</td>
+                  <td>Estimated intervention effect on the second outcome $(Y_2)$</td>
+                </tr>
+                <tr>
+                  <td>Total variance of $Y_1$</td>
+                  <td>$\\sigma_1^2$</td>
+                  <td>varY1</td>
+                  <td>Total variance of the first outcome, $Y_1$</td>
+                </tr>
+                <tr>
+                  <td>Total variance of $Y_2$</td>
+                  <td>$\\sigma_2^2$</td>
+                  <td>varY2</td>
+                  <td>Total variance of the second outcome, $Y_2$</td>
+                </tr>
+                <tr>
+                  <td>Endpoint-specific ICC for $Y_1$</td>
+                  <td>$\\rho_0^{(1)}$</td>
+                  <td>rho01</td>
+                  <td>Correlation for $Y_1$ for two different individuals in the same cluster</td>
+                </tr>
+                <tr>
+                  <td>Endpoint-specific ICC for $Y_2$</td>
+                  <td>$\\rho_0^{(2)}$</td>
+                  <td>rho02</td>
+                  <td>Correlation for $Y_2$ for two different individuals in the same cluster</td>
+                </tr>
+                <tr>
+                  <td>Inter-subject between-endpoint ICC</td>
+                  <td>$\\rho_1^{(1,2)}$</td>
+                  <td>rho1</td>
+                  <td>Correlation between $Y_1$ and $Y_2$ for two different individuals in the same cluster</td>
+                </tr>
+                <tr>
+                  <td>Intra-subject between-endpoint ICC</td>
+                  <td>$\\rho_2^{(1,2)}$</td>
+                  <td>rho2</td>
+                  <td>Correlation between $Y_1$ and $Y_2$ for the same individual</td>
+                </tr>
+                <tr>
+                  <td>Treatment allocation ratio</td>
+                  <td>$r$</td>
+                  <td>r</td>
+                  <td>Treatment allocation ratio; $K_2 = rK_1$</td>
+                </tr>
+              </tbody>
+            </table>
+          ") # End HTML()
+                         ), # End tags$div()
+                       p("1. This assumes equal treatment allocation. To be more precise, we often refer to the number of clusters in the treatment group as $ K_1 $, and the number of clusters in the control group as $ K_2 $.",
                          tags$br(),
-                         "2. Note that not all design methods make use of every parameter listed above.")
-                       )
-                     )
-              ),
+                         "2. Note that not all design methods make use of every parameter listed above.") # End p()
+                     ) # End card()
+              ) # End
+              ), # End fluidRow()
             fluid = TRUE), # End nav_panel()
 
   # UI 1 (power) -------------
   nav_panel(title = "Calculate Power",
             titlePanel("Calculate Power ($\\pi$): probability of correctly rejecting the null hypothesis"),
-            p("This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package `crt2power`. Enter your desired parameters in the boxes below, and click `Calculate` to generate the results for all five study design methods."),
+            p("This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package 'crt2power'. Enter your desired parameters in the boxes below, and click 'Calculate' to generate the results for all five study design methods."),
 
             fluidRow( # Main row to contain both input columns and the bar graph
 
               column(4, # Input parameters and calculate button
                      card(
-                       card_header("Input Parameters"),
+                       card_header("Input Parameters", style = "font-size: 18px;"),
                        fluidRow( # Inputs at the top
                          column(6,
                                 textInput("K_power", "$K_1$: Clusters in treatment group", value = ""),
@@ -166,7 +272,7 @@ ui <- page_navbar(
               column(8,
 
                      navset_card_underline(
-                       title = "Visualizations",
+                       title = tags$span("Visualizations", style = "font-size: 18px;"),
                        # Panel with plot ----
                        nav_panel("Plot", plotOutput("bargraph1", height = "587px")),
 
@@ -188,13 +294,13 @@ ui <- page_navbar(
   # UI 2 (K) -------------
   nav_panel(title = "Calculate K",
             titlePanel("Calculate $K$: number of clusters in treatment group"),
-            p("This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package `crt2power`. Enter your desired parameters in the boxes below, and click `Calculate` to generate the results for all five study design methods."),
+            p("This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package 'crt2power'. Enter your desired parameters in the boxes below, and click 'Calculate' to generate the results for all five study design methods."),
 
             # Main row to contain both input columns and the bar graph
             fluidRow(
               # Input parameters and calculate button
               column(4,
-                     card(card_header("Input Parameters"),
+                     card(card_header("Input Parameters", style = "font-size: 18px;"),
                      # Inputs at the top
                      fluidRow(
                        column(6,
@@ -231,7 +337,7 @@ ui <- page_navbar(
               # Bar graph to the right
               column(8,
                      navset_card_underline(
-                       title = "Visualizations",
+                       title = tags$span("Visualizations", style = "font-size: 18px;"),
                        # Panel with plot ----
                        nav_panel("Plot", plotOutput("bargraph2", height = "587px")),
 
@@ -251,13 +357,13 @@ ui <- page_navbar(
   # UI 3 (m) -------------
   nav_panel(title = "Calculate m",
             titlePanel("Calculate $m$: number of individuals per cluster"),
-            p("This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package `crt2power`. Enter your desired parameters in the boxes below, and click `Calculate` to generate the results for all five study design methods."),
+            p("This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package 'crt2power'. Enter your desired parameters in the boxes below, and click 'Calculate' to generate the results for all five study design methods."),
 
             # Main row to contain both input columns and the bar graph
             fluidRow(
               # Input parameters and calculate button
               column(4,
-                     card(card_header("Input Parameters"),
+                     card(card_header("Input Parameters", style = "font-size: 18px;"),
                      # Inputs at the top
                      fluidRow(
                        column(6,
@@ -294,7 +400,7 @@ ui <- page_navbar(
               # Bar graph to the right
               column(8,
                      navset_card_underline(
-                       title = "Visualizations",
+                       title = tags$span("Visualizations", style = "font-size: 18px;"),
                        # Panel with plot ----
                        nav_panel("Plot", plotOutput("bargraph3", height = "587px")),
 
@@ -306,10 +412,6 @@ ui <- page_navbar(
                      )
               )
             ),
-
-            # shinyjs::useShinyjs(),
-            # shinyjs::extendShinyjs(text = "shinyjs.refresh_page = function() { location.reload(); }", functions = "refresh_page"),
-            # actionButton("refresh", "Refresh Application"),
 
             fluid = TRUE
             ), # End nav_panel()
@@ -1039,65 +1141,6 @@ server <- function(input, output) {
                     `Individuals Per Cluster (m)` = Value)
 
     }, sanitize.text.function = function(x) x)
-
-  output$overviewTable <- renderTable({
-    myTable <- data.frame(
-      `Parameter` = c("\\(\\text{Statistical power}\\)",
-                      "\\(\\text{Number of clusters}\\)",
-                      "\\(\\text{Cluster size}\\)",
-                      "\\(\\text{Family-wise false positive rate}\\)",
-                      "\\(\\text{Effect for }Y_1\\)",
-                      "\\(\\text{Effect for }Y_2\\)",
-                      "\\(\\text{Total variance of }Y_1\\)",
-                      "\\(\\text{Total variance of }Y_2\\)",
-                      "\\(\\text{Endpoint-specific ICC for }Y_1\\)",
-                      "\\(\\text{Endpoint-specific ICC for }Y_2\\)",
-                      "\\(\\text{Inter-subject between-endpoint ICC}\\)",
-                      "\\(\\text{Intra-subject between-endpoint ICC}\\)",
-                      "\\(\\text{Treatment allocation ratio}\\)"),
-      `Notation` = c("\\(\\pi\\)",
-                                 "\\(K\\)",
-                                 "\\(m\\)",
-                                 "\\(\\alpha\\)",
-                                 "\\(\\beta_1^*\\)",
-                                 "\\(\\beta_2^*\\)",
-                                 "\\(\\sigma_1^2\\)",
-                                 "\\(\\sigma_2^2\\)",
-                                 "\\(\\rho_0^{(1)}\\)",
-                                 "\\(\\rho_0^{(2)}\\)",
-                                 "\\(\\rho_1^{(1,2)}\\)",
-                                 "\\(\\rho_2^{(1,2)}\\)",
-                                 "\\(r\\)"),
-      `Variable` = c("\\(\\text{power}\\)",
-                                     "\\(\\text{K}\\)",
-                                     "\\(\\text{m}\\)",
-                                     "\\(\\text{alpha}\\)",
-                                     "\\(\\text{beta1}\\)",
-                                     "\\(\\text{beta2}\\)",
-                                     "\\(\\text{varY1}\\)",
-                                     "\\(\\text{varY2}\\)",
-                                     "\\(\\text{rho01}\\)",
-                                     "\\(\\text{rho02}\\)",
-                                     "\\(\\text{rho1}\\)",
-                                     "\\(\\text{rho2}\\)",
-                                     "\\(\\text{r}\\)"),
-      `Description` = c("\\(\\text{Probability of detecting a true effect under } H_A\\)",
-                        "\\(\\text{Number of clusters in each treatment arm}^1\\)",
-                        "\\(\\text{Number of individuals in each cluster}\\)",
-                        "\\(\\text{Probability of one or more Type I error(s)}\\)",
-                        "\\(\\text{Estimated intervention effect on the first outcome }(Y_1)\\)",
-                        "\\(\\text{Estimated intervention effect on the second outcome }(Y_2)\\)",
-                        "\\(\\text{Total variance of the first outcome, } Y_1\\)",
-                        "\\(\\text{Total variance of the second outcome, } Y_2\\)",
-                        "\\(\\text{Correlation for } Y_1 \\text{ for two different individuals in the same cluster}\\)",
-                        "\\(\\text{Correlation for } Y_2 \\text{ for two different individuals in the same cluster}\\)",
-                        "\\(\\text{Correlation between } Y_1 \\text{ and } Y_2 \\text{ for two different individuals in the same cluster}\\)",
-                        "\\(\\text{Correlation between } Y_1 \\text{ and } Y_2 \\text{ for the same individual}\\)",
-                        "\\(\\text{Treatment allocation ratio; } K_2 = rK_1\\)")
-    )}, sanitize.text.function = function(x) x)
-
-
-
 }
 
 # Run the application

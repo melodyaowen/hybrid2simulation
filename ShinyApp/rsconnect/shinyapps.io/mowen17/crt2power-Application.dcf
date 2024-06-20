@@ -1,0 +1,12 @@
+name: crt2power-Application
+title: crt2power-Application
+username: mowen17
+account: mowen17
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12211888
+bundleId: 8769260
+url: https://mowen17.shinyapps.io/crt2power-Application/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
