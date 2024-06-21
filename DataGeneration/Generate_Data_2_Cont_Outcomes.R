@@ -189,6 +189,47 @@ calCorWks <- function(vars, rho01, rho2, sigmaz.square, m, Q){
   return(wCor)
 }
 
+# MLMM.estim() -------------------------------------------------------------------
+# Fit an MLMM to estimate parameters
+MLMM.estim <- function(myData, maxiter = 500, epsilon = 1e-4, verbose = FALSE){
+
+  # Fit mixed model to initialize parameters
+  fm1 <- nlme::lme(Y1 ~ treatment_z_k, random = ~ 1|cluster_k, data = myData)
+  fm2 <- nlme::lme(Y2 ~ treatment_z_k, random = ~ 1|cluster_k, data = myData)
+  Q <- 2 # Number of outcomes
+  zeta <- as.numeric(c(fm1$coefficients$fixed, fm2$coefficients$fixed))
+  beta1 <- zeta[1:2]
+  beta2 <- zeta[3:4]
+
+  m <- as.numeric(table(myData$cluster_k))
+
+  s2phi1 <- VarCorr(fm1)[1,1]
+  s2phi2 <- VarCorr(fm2)[1,1]
+  SigmaPhi <- diag(c(s2phi1, s2phi2))
+  InvS2Phi <- solve(SigmaPhi)
+
+  s2e1 <- VarCorr(fm1)[2,1]
+  s2e2 <- VarCorr(fm2)[2,1]
+  SigmaE <- diag(c(s2e1, s2e2))
+  InvS2E <- solve(SigmaE)
+
+  out1 <- all.vars(as.formula("Y1 ~ treatment_z_k"))[1]
+  out2 <- all.vars(as.formula("Y2 ~ treatment_z_k"))[1]
+  arm <- all.vars(as.formula("Y1 ~ treatment_z_k"))[2]
+
+  Y <- as.matrix(myData[,c(out1, out2)])
+  ID <- as.numeric(myData$cluster_k)
+  n <- length(unique(ID)) # K1 + K2
+
+  facz <- as.factor(as.data.frame(myData[,grep(arm, colnames(myData))])[[1]])
+  z <- as.numeric(facz) - 1
+  X <- as.matrix(cbind(1, z)) # design matrix
+
+  param <- list(theta = list(zeta = zeta, SigmaE = SigmaE, SigmaPhi = SigmaPhi))
+
+  return(param)
+}
+
 # EM.estim() -------------------------------------------------------------------
 # Uses EM estimation to estimate sample size calculation parameters
 EM.estim <- function(myData, maxiter = 500, epsilon = 1e-4, verbose = FALSE){
