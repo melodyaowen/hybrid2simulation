@@ -421,7 +421,7 @@ ui <- page_navbar(
     title = "Links",
     align = "right",
     nav_item(tags$a("GitHub Repository", href = "https://github.com/melodyaowen/crt2power")),
-    nav_item(tags$a("CRAN `crt2power` Manual", href = "https://shiny.posit.co"))
+    nav_item(tags$a("CRAN `crt2power` Manual", href = "https://cran.r-project.org/web/packages/crt2power/crt2power.pdf"))
   ),
 
 
