@@ -97,13 +97,28 @@ gen_crt_coprimary_data_cont <- function(K, # Number of clusters in treatment arm
                                       replace = FALSE))
 
   # Generate vector of random intercepts for cluster k across Q = 2 endpoints
-  phi_k <- mvrnorm(n = K_total, mu = rep(0, 2), Sigma = Sigma_phi) %>%
+  # phi_k <- mvrnorm(n = K_total, mu = rep(0, 2), Sigma = Sigma_phi) %>%
+  #   as.data.frame() %>%
+  #   dplyr::select(phi_k1 = V1, phi_k2 = V2) %>%
+  #   mutate(cluster_id = 1:K_total)
+
+  # Using a truncated normal (above 0)
+  phi_k <- rtmvnorm(n = K_total, mean = rep(0, 2), sigma = Sigma_phi,
+                    lower = rep(0, length = 2), upper = rep(Inf, length = 2)) %>%
     as.data.frame() %>%
     dplyr::select(phi_k1 = V1, phi_k2 = V2) %>%
     mutate(cluster_id = 1:K_total)
 
   # Generate vector of random intercepts for person j across Q = 2 endpoints
-  e_kj <- mvrnorm(m*K_total, mu = rep(0, 2), Sigma = Sigma_E) %>%
+  # e_kj <- mvrnorm(n = m*K_total, mu = rep(0, 2), Sigma = Sigma_E) %>%
+  #   as.data.frame() %>%
+  #   dplyr::select(e_kj1 = V1, e_kj2 = V2) %>%
+  #   mutate(subject_id = 1:study_n,
+  #          cluster_id = sort(rep(1:K_total, m)))
+
+  # Using a truncated normal (above 0)
+  e_kj <- rtmvnorm(n = m*K_total, mean = rep(0, 2), sigma = Sigma_E,
+                   lower = rep(0, length = 2), upper = rep(Inf, length = 2)) %>%
     as.data.frame() %>%
     dplyr::select(e_kj1 = V1, e_kj2 = V2) %>%
     mutate(subject_id = 1:study_n,
@@ -117,7 +132,8 @@ gen_crt_coprimary_data_cont <- function(K, # Number of clusters in treatment arm
     left_join(., e_kj, by = c("cluster_id", "subject_id")) %>%
     # Now create outcome columns based on inputs and calculated intercepts
     mutate(Y1 = beta1*trt_group + phi_k1 + e_kj1,
-           Y2 = beta2*trt_group + phi_k2 + e_kj2) %>%
+           Y2 = beta2*trt_group + phi_k2 + e_kj2,
+           Yc = Y1 + Y2) %>%
     dplyr::rename(subject_j = subject_id,
                   cluster_k = cluster_id,
                   treatment_z_k = trt_group)
@@ -191,9 +207,78 @@ calCorWks <- function(vars, rho01, rho2, sigmaz.square, m, Q){
 
 # MLMM.estim() -------------------------------------------------------------------
 # Fit an MLMM to estimate parameters
-MLMM.estim <- function(myData, maxiter = 500, epsilon = 1e-4, verbose = FALSE){
+MLMM.estim <- function(myData){
 
-  # Fit mixed model to initialize parameters
+  # Combined Outcome Assessment
+  fmC <- nlme::lme(Yc ~ treatment_z_k, random = ~ 1|cluster_k,
+                   data = myData)
+  betaC <- as.numeric(fmC$coefficients$fixed) # 2nd is treatment, 1st is int
+
+  # Get Var(BetaC)
+  vcov_fmC <- vcov(fmC)
+  varBetaC_sim <- vcov_fmC["treatment_z_k", "treatment_z_k"]
+
+  # Calculate outcome specific ICC for Yc
+  sigma2_phi_C <- as.numeric(VarCorr(fmC)[1,1])
+  sigma2_e_C <- as.numeric(VarCorr(fmC)[2,1])
+  rho0C_sim <- sigma2_phi_C/(sigma2_phi_C + sigma2_e_C)
+
+  # Calculate Var(Yc)
+  varYc_model_sim <- sigma2_phi_C + sigma2_e_C
+
+  # Fit MLMM, must transform the data first
+  myDataStacked <- myData %>%
+    tidyr::pivot_longer(cols = c("Y1", "Y2"),
+                        names_to = "Outcome_ID", values_to = "Outcome_Value") %>%
+    dplyr::select(subject_j, cluster_k, treatment_z_k,
+                  Outcome_ID, Outcome_Value, phi_k1, phi_k2, e_kj1, e_kj2) %>%
+    dplyr::arrange(cluster_k, subject_j)
+
+  myMLMM <- nlme::lme(Outcome_Value ~ Outcome_ID * treatment_z_k,
+                      random = ~ Outcome_ID | cluster_k/subject_j,
+                      data = myDataStacked,
+                      method = "REML")
+
+  # Get the summary of the model
+  myMLMM_summary <- summary(myMLMM)
+
+  # Extract fixed effects coefficients
+  fixed_effects <- myMLMM_summary$tTable
+
+  # Extract Beta1, Beta2, and their intercepts
+  intercept_Y1 <- fixed_effects["(Intercept)", "Value"]
+  intercept_Y2 <- intercept_Y1 + fixed_effects["Outcome_IDY2", "Value"]
+  beta1 <- fixed_effects["treatment_z_k", "Value"]
+  beta2 <- beta1 + fixed_effects["Outcome_IDY2:treatment_z_k", "Value"]
+
+  # Extract the variances of the betas for getting the test statistics later
+  vcov_matrix <- vcov(myMLMM) # variance-covariance matrix of the fixed effects
+
+  var_beta1 <- vcov_matrix["treatment_z_k", "treatment_z_k"]
+  var_beta2 <- var_beta1 + vcov_matrix["Outcome_IDY2:treatment_z_k",
+                                       "Outcome_IDY2:treatment_z_k"] +
+    2 * vcov_matrix["treatment_z_k", "Outcome_IDY2:treatment_z_k"]
+
+  # Get variance components for cluster and individual-level components
+  var_components <- VarCorr(myMLMM) # Extract variance components (random efcts)
+
+  cluster_var_Y1 <- as.numeric(var_components[2,1]) # Cluster Intercept, Var Column
+  cluster_var_Y2 <- as.numeric(var_components[3,1]) # Cluster Outcome_IDY2, Var Column
+
+  subject_var_Y1 <- as.numeric(var_components[5,1]) # Subject Intercept, Var Column
+  subject_var_Y2 <- as.numeric(var_components[6,1]) # Subject OutcomeIDY2, Var Column
+  residual_var <- as.numeric(var_components[7,1]) # Residual variance
+
+  # Calculate total variances for Y1 and Y2
+  total_var_Y1 <- cluster_var_Y1 + subject_var_Y1 + residual_var
+  total_var_Y2 <- cluster_var_Y2 + subject_var_Y2 + residual_var
+
+  # Calculate ICC for Y1 and Y2
+  ICC_Y1 <- cluster_var_Y1 / total_var_Y1
+  ICC_Y2 <- cluster_var_Y2 / total_var_Y2
+
+
+
   fm1 <- nlme::lme(Y1 ~ treatment_z_k, random = ~ 1|cluster_k, data = myData)
   fm2 <- nlme::lme(Y2 ~ treatment_z_k, random = ~ 1|cluster_k, data = myData)
   Q <- 2 # Number of outcomes
@@ -213,6 +298,13 @@ MLMM.estim <- function(myData, maxiter = 500, epsilon = 1e-4, verbose = FALSE){
   SigmaE <- diag(c(s2e1, s2e2))
   InvS2E <- solve(SigmaE)
 
+  # Get Var(Beta1) and Var(Beta2)
+  vcov_fm1 <- vcov(fm1)
+  var_Beta1 <- vcov_fm1["treatment_z_k", "treatment_z_k"]
+  vcov_fm2 <- vcov(fm2)
+  var_Beta2 <- vcov_fm2["treatment_z_k", "treatment_z_k"]
+
+  # Output formulas
   out1 <- all.vars(as.formula("Y1 ~ treatment_z_k"))[1]
   out2 <- all.vars(as.formula("Y2 ~ treatment_z_k"))[1]
   arm <- all.vars(as.formula("Y1 ~ treatment_z_k"))[2]
@@ -225,7 +317,13 @@ MLMM.estim <- function(myData, maxiter = 500, epsilon = 1e-4, verbose = FALSE){
   z <- as.numeric(facz) - 1
   X <- as.matrix(cbind(1, z)) # design matrix
 
-  param <- list(theta = list(zeta = zeta, SigmaE = SigmaE, SigmaPhi = SigmaPhi))
+  # Calculate rho1 and rho2
+
+  param <- list(theta = list(zeta = zeta, SigmaE = SigmaE, SigmaPhi = SigmaPhi),
+                combined = list(betaC = betaC, varBetaC_sim = varBetaC_sim,
+                                rho0C_sim = rho0C_sim,
+                                varYc_model_sim = varYc_model_sim),
+                varBetas = list(var_Beta1 = var_Beta1, var_Beta2 = var_Beta2))
 
   return(param)
 }
@@ -378,94 +476,203 @@ EM.estim <- function(myData, maxiter = 500, epsilon = 1e-4, verbose = FALSE){
 }
 
 # calculateSimDataStats() ------------------------------------------------------
-calculateSimDataStats <- function(em_output, my_data){
-
-  # Calculate simulation outcome variances
-  varY1_sim <- var(my_data$Y1)
-  varY2_sim <- var(my_data$Y2)
-
-  # Variance component matrices
-  SigmaE <- em_output$theta$SigmaE
-  SigmaPhi <- em_output$theta$SigmaPhi
-
-  sigma2_e_1 <- SigmaE[1,1]
-  sigma2_e_2 <- SigmaE[2,2]
-  sigma_e_12 <- SigmaE[1,2]
-
-  sigma2_phi_1 <- SigmaPhi[1,1]
-  sigma2_phi_2 <- SigmaPhi[2,2]
-  sigma_phi_12 <- SigmaPhi[1,2]
-
-  # Calculate outcome specific ICC's
-  rho01_sim <- sigma2_phi_1/(sigma2_phi_1 + sigma2_e_1)
-  rho02_sim <- sigma2_phi_2/(sigma2_phi_2 + sigma2_e_2)
-
-  # Calculate Intra- and Inter- correlations
-  rho1_sim <- sigma_phi_12/(sqrt(sigma2_phi_1 + sigma2_e_1)*
-                              sqrt(sigma2_phi_2 + sigma2_e_2))
-  rho2_sim <- (sigma_phi_12 + sigma_e_12)/(sqrt(sigma2_phi_1 + sigma2_e_1)*
-                                             sqrt(sigma2_phi_2 + sigma2_e_2))
+calculateSimDataStats <- function(em_output, mlmm_output, my_data){
 
   # Calculate study sizes
   K_Total_sim <- length(unique(my_data$cluster_k))
   K_Treatment_sim <- length(unique(filter(my_data, treatment_z_k == 1)$cluster_k))
   m_sim <- nrow(filter(my_data, cluster_k == 1))
 
-  # Calculate betas
-  beta1_sim <- em_output$theta$zeta[2]
-  beta2_sim <- em_output$theta$zeta[4]
-
-  beta1_intercept <- em_output$theta$zeta[1]
-  beta2_intercept <- em_output$theta$zeta[3]
-
   # Treatment Allocation Ratio, recall r = K2/K1 where K1 = # in treatment group
   r_sim <- nrow(filter(my_data, treatment_z_k == 0))/
     nrow(filter(my_data, treatment_z_k == 1))
-
   r_alt_sim <- 1/(r_sim + 1)
   sigmaz.square_sim <- r_alt_sim*(1 - r_alt_sim)
 
+  # Calculate simulation outcome variances (from data directly)
+  varY1_data_sim <- var(my_data$Y1)
+  varY2_data_sim <- var(my_data$Y2)
+  varYc_data_sim <- var(my_data$Yc)
+
+  # MLMM WITH EM ESTIMATION ----------------------------------------------------
+
+  # Variance component matrices
+  SigmaE_em <- em_output$theta$SigmaE
+  SigmaPhi_em <- em_output$theta$SigmaPhi
+
+  sigma2_e_1_em <- SigmaE_em[1,1]
+  sigma2_e_2_em <- SigmaE_em[2,2]
+  sigma_e_12_em <- SigmaE_em[1,2]
+
+  sigma2_phi_1_em <- SigmaPhi_em[1,1]
+  sigma2_phi_2_em <- SigmaPhi_em[2,2]
+  sigma_phi_12_em <- SigmaPhi_em[1,2]
+
+  # Calculate simulation outcome variances (model based)
+  varY1_model_sim_em <- sigma2_e_1_em + sigma2_phi_1_em
+  varY2_model_sim_em <- sigma2_e_2_em + sigma2_phi_2_em
+
+  # Calculate outcome specific ICC's
+  rho01_sim_em <- sigma2_phi_1_em/(sigma2_phi_1_em + sigma2_e_1_em)
+  rho02_sim_em <- sigma2_phi_2_em/(sigma2_phi_2_em + sigma2_e_2_em)
+
+  # Calculate Intra- and Inter- correlations
+  rho1_sim_em <- sigma_phi_12_em/(sqrt(sigma2_phi_1_em + sigma2_e_1_em)*
+                                    sqrt(sigma2_phi_2_em + sigma2_e_2_em))
+  rho2_sim_em <- (sigma_phi_12_em + sigma_e_12_em)/(sqrt(sigma2_phi_1_em + sigma2_e_1_em)*
+                                                      sqrt(sigma2_phi_2_em + sigma2_e_2_em))
+
+  # Calculate betas
+  beta1_sim_em <- em_output$theta$zeta[2]
+  beta2_sim_em <- em_output$theta$zeta[4]
+
+  beta1_intercept_em <- em_output$theta$zeta[1]
+  beta2_intercept_em <- em_output$theta$zeta[3]
+
   # Calculate variance of betas, i.e. Var(sqrt(n)*(beta_hat - beta))
-  sigmaks.sq <- diag(calCovbetas_eq(vars = c(varY1_sim, varY2_sim),
-                                    rho01 = matrix(c(rho01_sim, rho1_sim,
-                                                     rho1_sim, rho02_sim),
-                                                   2, 2),
-                                    rho2 = matrix(c(1, rho2_sim,
-                                                    rho2_sim, 1),
-                                                  2, 2),
-                                    sigmaz.square = sigmaz.square_sim,
-                                    m = m_sim,
-                                    Q = 2))
+  sigmaks.sq_em <- diag(calCovbetas_eq(vars = c(varY1_model_sim_em,
+                                                varY2_model_sim_em),
+                                       rho01 = matrix(c(rho01_sim_em,
+                                                        rho1_sim_em,
+                                                        rho1_sim_em,
+                                                        rho02_sim_em),
+                                                      2, 2),
+                                       rho2 = matrix(c(1, rho2_sim_em,
+                                                       rho2_sim_em, 1),
+                                                     2, 2),
+                                       sigmaz.square = sigmaz.square_sim,
+                                       m = m_sim,
+                                       Q = 2))
 
   # Variance of betas
-  varBeta1_sim <- sigmaks.sq[1]/K_Total_sim
-  varBeta2_sim <- sigmaks.sq[2]/K_Total_sim
+  varBeta1_calc_sim_em <- sigmaks.sq_em[1]/K_Total_sim
+  varBeta2_calc_sim_em <- sigmaks.sq_em[2]/K_Total_sim
 
+  # MLMM ESTIMATION ------------------------------------------------------------
+
+  # Variance component matrices
+  SigmaE_mlmm <- mlmm_output$theta$SigmaE
+  SigmaPhi_mlmm <- mlmm_output$theta$SigmaPhi
+
+  sigma2_e_1_mlmm <- SigmaE_mlmm[1,1]
+  sigma2_e_2_mlmm <- SigmaE_mlmm[2,2]
+  sigma_e_12_mlmm <- SigmaE_mlmm[1,2]
+
+  sigma2_phi_1_mlmm <- SigmaPhi_mlmm[1,1]
+  sigma2_phi_2_mlmm <- SigmaPhi_mlmm[2,2]
+  sigma_phi_12_mlmm <- SigmaPhi_mlmm[1,2]
+
+  # Calculate simulation outcome variances (model based)
+  varY1_model_sim_mlmm <- sigma2_e_1_mlmm + sigma2_phi_1_mlmm
+  varY2_model_sim_mlmm <- sigma2_e_2_mlmm + sigma2_phi_2_mlmm
+
+  # Calculate outcome specific ICC's
+  rho01_sim_mlmm <- sigma2_phi_1_mlmm/(sigma2_phi_1_mlmm + sigma2_e_1_mlmm)
+  rho02_sim_mlmm <- sigma2_phi_2_mlmm/(sigma2_phi_2_mlmm + sigma2_e_2_mlmm)
+
+  # Calculate Intra- and Inter- correlations
+  rho1_sim_mlmm <- sigma_phi_12_mlmm/(sqrt(sigma2_phi_1_mlmm + sigma2_e_1_mlmm)*
+                                        sqrt(sigma2_phi_2_mlmm + sigma2_e_2_mlmm))
+  rho2_sim_mlmm <- (sigma_phi_12_mlmm + sigma_e_12_mlmm)/(sqrt(sigma2_phi_1_mlmm + sigma2_e_1_mlmm)*
+                                                            sqrt(sigma2_phi_2_mlmm + sigma2_e_2_mlmm))
+
+  # Calculate betas
+  beta1_sim_mlmm <- mlmm_output$theta$zeta[2]
+  beta2_sim_mlmm <- mlmm_output$theta$zeta[4]
+
+  beta1_intercept_mlmm <- mlmm_output$theta$zeta[1]
+  beta2_intercept_mlmm <- mlmm_output$theta$zeta[3]
+
+  # Calculate variance of betas, i.e. Var(sqrt(n)*(beta_hat - beta))
+  sigmaks.sq_mlmm <- diag(calCovbetas_eq(vars = c(varY1_model_sim_mlmm,
+                                                  varY2_model_sim_mlmm),
+                                         rho01 = matrix(c(rho01_sim_mlmm,
+                                                          rho1_sim_mlmm,
+                                                          rho1_sim_mlmm,
+                                                          rho02_sim_mlmm),
+                                                        2, 2),
+                                         rho2 = matrix(c(1, rho2_sim_mlmm,
+                                                         rho2_sim_mlmm, 1),
+                                                       2, 2),
+                                         sigmaz.square = sigmaz.square_sim,
+                                         m = m_sim,
+                                         Q = 2))
+
+  # Variance of betas calculated from the output
+  varBeta1_calc_sim_mlmm <- sigmaks.sq_mlmm[1]/K_Total_sim
+  varBeta2_calc_sim_mlmm <- sigmaks.sq_mlmm[2]/K_Total_sim
+
+  # Combined outcome stats
+  betaC_sim_mlmm <- mlmm_output$combined$betaC[2]
+  betaC_intercept_mlmm <- mlmm_output$combined$betaC[1]
+  rho0C_sim_mlmm <- mlmm_output$combined$rho0C_sim
+  varYc_model_sim_mlmm <- mlmm_output$combined$varYc_model_sim
+  varBetaC_model_sim_mlmm <- mlmm_output$combined$varBetaC_sim
+
+  # Calculating Var(Betac) from beta1 and beta2
+  varBetaC_calc_sim_mlmm <- varBeta1_calc_sim_mlmm + varBeta2_calc_sim_mlmm +
+    (1+(1/r_sim))*(1/(K_Treatment_sim*m_sim))*(rho2_sim_em + ((m_sim - 1)*rho1_sim_em)*sqrt(varY1_model_sim_mlmm*varY2_model_sim_mlmm))
+
+  # PRINTING OUTPUT ------------------------------------------------------------
   # Output specification table
   sim_data_stats <- tibble(Parameter = c("K Total", "K Treatment", "m",
                                          "beta1", "beta1 intercept",
                                          "beta2", "beta2 intercept",
-                                         "rho01", "rho02",
+                                         "betaC", "betaC intercept",
+                                         "rho01", "rho02", "rho0C",
                                          "rho1", "rho2",
-                                         "varY1", "varY2",
-                                         "varBeta1", "varBeta2",
+                                         "varY1_model",
+                                         "varY2_model",
+                                         "varYc_model",
+                                         "varBeta1 (calc from output)",
+                                         "varBeta2 (calc from output)",
+                                         "varBetaC (from model)",
+                                         "varBetaC (calc from 1 and 2)",
                                          "r"),
-                           `Estimated Value` = c(K_Total_sim,
-                                                 K_Treatment_sim,
-                                                 m_sim,
-                                                 round(beta1_sim, 4),
-                                                 round(beta1_intercept, 4),
-                                                 round(beta2_sim, 4),
-                                                 round(beta2_intercept, 4),
-                                                 round(rho01_sim, 4),
-                                                 round(rho02_sim, 4),
-                                                 round(rho1_sim, 4),
-                                                 round(rho2_sim, 4),
-                                                 round(varY1_sim, 4),
-                                                 round(varY2_sim, 4),
-                                                 round(varBeta1_sim, 4),
-                                                 round(varBeta2_sim, 4),
-                                                 r_sim
+                           `Estimated Value (MLMM with EM)` = c(K_Total_sim,
+                                                                K_Treatment_sim,
+                                                                m_sim,
+                                                                round(beta1_sim_em, 4),
+                                                                round(beta1_intercept_em, 4),
+                                                                round(beta2_sim_em, 4),
+                                                                round(beta2_intercept_em, 4),
+                                                                NA, NA,
+                                                                round(rho01_sim_em, 4),
+                                                                round(rho02_sim_em, 4),
+                                                                NA,
+                                                                round(rho1_sim_em, 4),
+                                                                round(rho2_sim_em, 4),
+                                                                round(varY1_model_sim_em, 4),
+                                                                round(varY2_model_sim_em, 4),
+                                                                NA,
+                                                                round(varBeta1_calc_sim_em, 4),
+                                                                round(varBeta2_calc_sim_em, 4),
+                                                                NA,
+                                                                NA,
+                                                                r_sim
+                           ),
+                           `Estimated Value (MLMM without EM)` = c(K_Total_sim,
+                                                                   K_Treatment_sim,
+                                                                   m_sim,
+                                                                   round(beta1_sim_mlmm, 4),
+                                                                   round(beta1_intercept_mlmm, 4),
+                                                                   round(beta2_sim_mlmm, 4),
+                                                                   round(beta2_intercept_mlmm, 4),
+                                                                   round(betaC_sim_mlmm, 4),
+                                                                   round(betaC_intercept_mlmm, 4),
+                                                                   round(rho01_sim_mlmm, 4),
+                                                                   round(rho02_sim_mlmm, 4),
+                                                                   round(rho0C_sim_mlmm, 4),
+                                                                   round(rho1_sim_mlmm, 4),
+                                                                   round(rho2_sim_mlmm, 4),
+                                                                   round(varY1_model_sim_mlmm, 4),
+                                                                   round(varY2_model_sim_mlmm, 4),
+                                                                   round(varYc_model_sim_mlmm, 4),
+                                                                   round(varBeta1_calc_sim_mlmm, 4),
+                                                                   round(varBeta2_calc_sim_mlmm, 4),
+                                                                   round(varBetaC_model_sim_mlmm, 4),
+                                                                   round(varBetaC_calc_sim_mlmm,4),
+                                                                   r_sim
                            )
   )
 
@@ -502,23 +709,37 @@ create_all_cont_sim_dats <- function(n = 100,
                                              varY1 = varY1_input,
                                              varY2 = varY2_input,
                                              r = r_input)
-    myParams <- EM.estim(myData = mySimData,
-                         maxiter = 500,
-                         epsilon = 1e-4,
-                         verbose = FALSE)
 
-    simStats <- calculateSimDataStats(em_output = myParams,
+    # Theoretical values for Combined Outcome
+    rho0C_theoretical <- (rho01_input*varY1_input + rho02_input*varY2_input +
+                            2*rho1_input*sqrt(varY1_input)*sqrt(varY2_input))/
+      (varY1_input + varY2_input + 2*rho2_input*sqrt(varY1_input)*sqrt(varY2_input))
+    varYc_theoretical <- varY1_input + varY2_input +
+      2*rho2_input*sqrt(varY1_input)*sqrt(varY2_input)
+    betaC_theoretical <- beta1_input + beta2_input
+
+    myParamsEM <- EM.estim(myData = mySimData,
+                           maxiter = 500,
+                           epsilon = 1e-4,
+                           verbose = FALSE)
+
+    myParamsMLMM <- MLMM.estim(myData = mySimData)
+
+    simStats <- calculateSimDataStats(em_output = myParamsEM,
+                                      mlmm_output = myParamsMLMM,
                                       my_data = mySimData) %>%
       filter(Parameter != "varBeta1", Parameter != "varBeta2") %>%
-      mutate(`True Value` = c(K_input + r_input*K_input,
-                              K_input, m_input,
-                              beta1_input, 0,
-                              beta2_input, 0,
-                              rho01_input, rho02_input,
-                              rho1_input, rho2_input,
-                              varY1_input, varY2_input,
-                              r_input)) %>%
-      relocate(`Parameter`, `True Value`)
+      mutate(`Theoretical Value` = c(K_input + r_input*K_input,
+                                     K_input, m_input,
+                                     beta1_input, 0,
+                                     beta2_input, 0,
+                                     betaC_theoretical, 0,
+                                     rho01_input, rho02_input, rho0C_theoretical,
+                                     rho1_input, rho2_input,
+                                     varY1_input, varY2_input, varYc_theoretical,
+                                     NA, NA, NA, NA,
+                                     r_input)) %>%
+      relocate(`Parameter`, `Theoretical Value`)
 
     simDataList[[i]] <- mySimData
     simStatList[[i]] <- simStats
