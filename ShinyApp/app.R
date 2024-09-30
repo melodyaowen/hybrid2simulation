@@ -257,13 +257,24 @@ ui <- page_navbar(
                          ),
                        # Action button to trigger the calculation
                        fluidRow(
-                         column(3, actionButton("calcButton1", "Calculate")),
+                         column(4,
+                                div(
+                                  selectInput("inputDist",
+                                              "Distribution",
+                                              choices = c("Chi-Square" = "Chi2", "F-Distribution" = "F")),
+                                  style = "margin-top: -25px;"  # Apply margin-top here
+                                )
+                         ),
+                         column(3,
+                                actionButton("calcButton1", "Calculate")
+                         ),
                          column(5,
                                 shinyjs::useShinyjs(),
                                 shinyjs::extendShinyjs(text = "shinyjs.refresh_page = function() { location.reload(); }", functions = "refresh_page"),
                                 actionButton("refresh", "Refresh Application")
-                                )
-                         ),
+                         )
+                       )
+                       ,
                        fluidRow = TRUE
                        )
                      ),
@@ -450,6 +461,7 @@ server <- function(input, output) {
     rho02_input <- as.numeric(input$rho02_power)
     rho1_input <- as.numeric(input$rho1_power)
     rho2_input <- as.numeric(input$rho2_power)
+    dist_input <- as.character(input$inputDist)
 
     # r_input <- 1
     # m_input <- 300
@@ -466,56 +478,47 @@ server <- function(input, output) {
 
     # Ensure inputs are not empty
     if (!is.na(r_input) && !is.na(m_input) && !is.na(K_input) && !is.na(alpha_input) && !is.na(beta1_input) && !is.na(beta2_input) && !is.na(varY1_input) && !is.na(varY2_input) && !is.na(rho01_input) && !is.na(rho02_input) && !is.na(rho1_input) && !is.na(rho2_input)) {
-      power1_bonf <- calc_pwr_pval_adj(K = K_input, m = m_input,
+      power1_bonf <- calc_pwr_pval_adj(dist = dist_input, K = K_input, m = m_input,
                                      alpha = alpha_input,
                                      beta1 = beta1_input, beta2 = beta2_input,
                                      varY1 = varY1_input, varY2 = varY2_input,
                                      rho01 = rho01_input, rho02 = rho02_input,
                                      rho2  = rho2_input, r = r_input)$`Final Power`[1]
 
-      power1_sidak <- calc_pwr_pval_adj(K = K_input, m = m_input,
+      power1_sidak <- calc_pwr_pval_adj(dist = dist_input, K = K_input, m = m_input,
                                       alpha = alpha_input,
                                       beta1 = beta1_input, beta2 = beta2_input,
                                       varY1 = varY1_input, varY2 = varY2_input,
                                       rho01 = rho01_input, rho02 = rho02_input,
                                       rho2  = rho2_input, r = r_input)$`Final Power`[2]
 
-      power1_dap <- calc_pwr_pval_adj(K = K_input, m = m_input,
+      power1_dap <- calc_pwr_pval_adj(dist = dist_input, K = K_input, m = m_input,
                                 alpha = alpha_input,
                                 beta1 = beta1_input, beta2 = beta2_input,
                                 varY1 = varY1_input, varY2 = varY2_input,
                                 rho01 = rho01_input, rho02 = rho02_input,
                                 rho2  = rho2_input, r = r_input)$`Final Power`[3]
 
-      power2 <- calc_pwr_comb_outcome(K = K_input, m = m_input,
+      power2 <- calc_pwr_comb_outcome(dist = dist_input, K = K_input, m = m_input,
                                 alpha = alpha_input, r = r_input,
                                 beta1 = beta1_input, beta2 = beta2_input,
                                 varY1 = varY1_input, varY2 = varY2_input,
                                 rho01 = rho01_input, rho02 = rho02_input,
                                 rho1 = rho1_input, rho2  = rho2_input)
 
-      power3 <- calc_pwr_single_1dftest(m = m_input, K = K_input,
+      power3 <- calc_pwr_single_1dftest(dist = dist_input, m = m_input, K = K_input,
                                   alpha = alpha_input, r = r_input,
                                   beta1 = beta1_input, beta2 = beta2_input,
                                   varY1 = varY1_input, varY2 = varY2_input,
                                   rho01 = rho01_input, rho02 = rho02_input,
                                   rho1 = rho1_input, rho2  = rho2_input)
 
-      power4_F <- calc_pwr_disj_2dftest(m = m_input, K = K_input,
+      power4 <- calc_pwr_disj_2dftest(dist = dist_input, m = m_input, K = K_input,
                                   alpha = alpha_input, r = r_input,
                                   beta1 = beta1_input, beta2 = beta2_input,
                                   varY1 = varY1_input, varY2 = varY2_input,
                                   rho01 = rho01_input, rho02 = rho02_input,
-                                  rho1 = rho1_input, rho2  = rho2_input,
-                                  dist = "F")
-
-      power4_Chi2 <- calc_pwr_disj_2dftest(m = m_input, K = K_input,
-                                     alpha = alpha_input, r = r_input,
-                                     beta1 = beta1_input, beta2 = beta2_input,
-                                     varY1 = varY1_input, varY2 = varY2_input,
-                                     rho01 = rho01_input, rho02 = rho02_input,
-                                     rho1 = rho1_input, rho2  = rho2_input,
-                                     dist = "Chi2")
+                                  rho1 = rho1_input, rho2  = rho2_input)
 
       power5_T <- calc_pwr_conj_test(m = m_input, K = K_input,
                                alpha = alpha_input, r = r_input,
@@ -537,20 +540,19 @@ server <- function(input, output) {
       data.frame(
         Function = c("P-Value Adj. (Bonf.)", "P-Value Adj. (Sidak)",
                      "P-Value Adj. (D/AP)", "Combined Outcomes",
-                     "Single Weighted", "Disjunctive F-dist",
-                     "Disjunctive Chi2", "Conjunctive T-dist", "Conjunctive MVN"),
+                     "Single Weighted", "Disjunctive 2-DF",
+                     "Conjunctive T-dist", "Conjunctive MVN"),
         TableLabel = c("P-Value Adjustment (Bonferroni)", "P-Value Adjustment (Sidak)",
                        "P-Value Adjustment (D/AP)", "Combined/Composite Outcomes Approach",
-                       "Single 1-DF Weighted Test", "Disjunctive 2-DF Test (F Distribution)",
-                       "Disjunctive 2-DF Test (Chi-2 Distribution)",
+                       "Single 1-DF Weighted Test", "Disjunctive 2-DF Test",
                        "Conjunctive IU Test (T Distribution)", "Conjunctive IU Test (Multivariate Normal Distribution)"),
         MethodIndex = c("Method 1", "Method 1", "Method 1",
-                        "Method 2", "Method 3", "Method 4", "Method 4",
+                        "Method 2", "Method 3", "Method 4",
                         "Method 5", "Method 5"),
         Value = c(power1_bonf, power1_sidak, power1_dap,
-                  power2, power3, power4_F, power4_Chi2,
+                  power2, power3, power4,
                   power5_T, power5_MVN),
-        Fill = c(1, 2, 3, 4, 5, 6, 7, 8, 9)
+        Fill = c(1, 2, 3, 4, 5, 6, 7, 8)
       )
     } else {
       data.frame(
