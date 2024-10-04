@@ -230,7 +230,7 @@ ui <- page_navbar(
   # UI 1 (power) -------------
   nav_panel(title = "Calculate Power",
             titlePanel("Calculate Power ($\\pi$): probability of correctly rejecting the null hypothesis"),
-            p("This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package 'crt2power'. Enter your desired parameters in the boxes below, and click 'Calculate' to generate the results for all five study design methods."),
+            p("This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package 'crt2power'. Enter your desired parameters in the boxes below, and click 'Calculate' to generate the results for all five study design methods. Please enter only numeric values into the input fields. Decimals are allowed, but fractions (e.g., '1/2') and mathematical operations (e.g., '1 + 1') are not accepted."),
 
             fluidRow( # Main row to contain both input columns and the bar graph
 
@@ -305,7 +305,7 @@ ui <- page_navbar(
   # UI 2 (K) -------------
   nav_panel(title = "Calculate K",
             titlePanel("Calculate $K$: number of clusters in treatment group"),
-            p("This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package 'crt2power'. Enter your desired parameters in the boxes below, and click 'Calculate' to generate the results for all five study design methods."),
+            p("This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package 'crt2power'. Enter your desired parameters in the boxes below, and click 'Calculate' to generate the results for all five study design methods. Please enter only numeric values into the input fields. Decimals are allowed, but fractions (e.g., '1/2') and mathematical operations (e.g., '1 + 1') are not accepted. Power must be in decimal format."),
 
             # Main row to contain both input columns and the bar graph
             fluidRow(
@@ -368,7 +368,7 @@ ui <- page_navbar(
   # UI 3 (m) -------------
   nav_panel(title = "Calculate m",
             titlePanel("Calculate $m$: number of individuals per cluster"),
-            p("This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package 'crt2power'. Enter your desired parameters in the boxes below, and click 'Calculate' to generate the results for all five study design methods."),
+            p("This ShinyApp lets the user calculate the number of clusters in the treatment group, cluster size, or statistical power from the user's desired input parameters. Calculations are done using the R package 'crt2power'. Enter your desired parameters in the boxes below, and click 'Calculate' to generate the results for all five study design methods. Please enter only numeric values into the input fields. Decimals are allowed, but fractions (e.g., '1/2') and mathematical operations (e.g., '1 + 1') are not accepted. Power must be in decimal format."),
 
             # Main row to contain both input columns and the bar graph
             fluidRow(
